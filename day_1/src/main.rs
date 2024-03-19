@@ -1,7 +1,4 @@
-use std::fs::File;
-use std::io::BufReader;
 use std::num::ParseIntError;
-use std::io::prelude::*;
 
 fn get_word_from_line(line: &str) -> Result<i32, ParseIntError> {
     let letters: [&str; 9] = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
@@ -59,12 +56,9 @@ fn get_word_from_line(line: &str) -> Result<i32, ParseIntError> {
 }
 
 fn main() -> std::io::Result<()> {
-    let file = File::open("input.txt")?;
-    let mut buf_reader = BufReader::new(file);
-    let mut contents = String::new();
-    buf_reader.read_to_string(&mut contents)?;
-    
-    let lines:Vec<&str> = contents.split("\r\n").collect();
+    let input = include_str!("../input.txt");
+
+    let lines:Vec<&str> = input.lines().collect();
 
     let mut count:i32 = 0;
 
