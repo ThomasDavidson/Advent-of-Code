@@ -1,17 +1,3 @@
-use std::fs::File;
-use std::io::{BufReader, Error, Read};
-
-fn read_file(file_path: &str) -> Result<Vec<String>, Error> {
-    let file = File::open(file_path)?;
-    let mut reader = BufReader::new(file);
-    let mut contents = String::new();
-    reader.read_to_string(&mut contents)?;
-
-    let lines: Vec<String> = contents.lines().map(|line| line.to_string()).collect();
-
-    Ok(lines)
-}
-
 fn has_special_char(compare_top: &str, start_cmp_val: usize, end_value: usize) -> bool {
     let compare_top_section = compare_top.get(start_cmp_val..end_value);
 
@@ -27,9 +13,9 @@ fn has_special_char(compare_top: &str, start_cmp_val: usize, end_value: usize) -
 }
 
 fn get_number_from_lines(
-    compare: &String,
-    compare_top: Option<&String>,
-    compare_bottom: Option<&String>,
+    compare: &&str,
+    compare_top: Option<&&str>,
+    compare_bottom: Option<&&str>,
 ) -> i32 {
     let mut count: i32 = 0;
 
@@ -98,13 +84,12 @@ fn get_number_from_lines(
 
 fn main() {
     let mut count: i32 = 0;
-    let lines = match read_file("input.txt") {
-        Ok(file) => file,
-        Err(error) => panic!("Problem opening the file: {:?}", error),
-    };
+    let input = include_str!("../input.txt");
+    let lines: Vec<&str> = input.lines().collect();
 
-    for (pos, line) in lines.iter().enumerate() {
 
+    for pos in 0..lines.len() {
+        let line = lines.get(pos).unwrap();
         let next_line = lines.get(pos + 1);
         let previous_line = if pos == 0 { None } else { lines.get(pos - 1) };
 
@@ -119,9 +104,9 @@ mod tests {
     use crate::get_number_from_lines;
     #[test]
     fn test1() {
-        let top_line =    ".............*..........948..808..158..........%...............*................&......*537.......................=............-....529.....".to_string();
-        let line =        "164*....18..753............/..*............................96.......................316........382........946...685.........455.............".to_string();
-        let bottom_line = "....672...........*205.........695...........................$...279....#625....138..................115....*.........566..........410......".to_string();
+        let top_line =    ".............*..........948..808..158..........%...............*................&......*537.......................=............-....529.....";
+        let line =        "164*....18..753............/..*............................96.......................316........382........946...685.........455.............";
+        let bottom_line = "....672...........*205.........695...........................$...279....#625....138..................115....*.........566..........410......";
 
         let result = get_number_from_lines(&line, Some(&top_line), Some(&bottom_line));
         assert_eq!(3415, result);
@@ -129,8 +114,8 @@ mod tests {
 
     #[test]
     fn test2() {
-        let top_line =    ".....*.*...........223..........&19..........*.....*...246.....*........................526*939..........*....33..51....403..........706....".to_string();
-        let line =        "...832..383...287.........................216....103...........710..................958...................288...............................".to_string();
+        let top_line =    ".....*.*...........223..........&19..........*.....*...246.....*........................526*939..........*....33..51....403..........706....";
+        let line =        "...832..383...287.........................216....103...........710..................958...................288...............................";
 
         let result = get_number_from_lines(&line, Some(&top_line), None);
         assert_eq!(2532, result);
