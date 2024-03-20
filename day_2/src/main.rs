@@ -1,8 +1,7 @@
-use std::fs::File;
-use std::io::BufReader;
-use std::io::prelude::*;
 use regex::Regex;
-
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::BufReader;
 
 #[derive(Debug)]
 struct Game {
@@ -15,7 +14,7 @@ fn get_regex_from_str(line: &str, regex: &str) -> i32 {
     let num_reg = Regex::new(regex).unwrap();
 
     let Some(num_capt) = num_reg.captures(line) else {
-        return 0
+        return 0;
     };
 
     num_capt[1].parse().unwrap()
@@ -32,7 +31,7 @@ fn get_color_from_lines(color_line: &str) -> Game {
 fn get_max_game_colours_from_line(line: &str) -> Game {
     let mut bag_colors: Vec<Game> = vec![];
 
-    let mut min_required = Game{
+    let mut min_required = Game {
         red: 0,
         green: 0,
         blue: 0,
@@ -66,8 +65,8 @@ fn main() -> std::io::Result<()> {
     let mut buf_reader = BufReader::new(file);
     let mut contents = String::new();
     buf_reader.read_to_string(&mut contents)?;
-    
-    let lines:Vec<&str> = contents.split("\r\n").collect();
+
+    let lines: Vec<&str> = contents.split("\r\n").collect();
 
     let game = Game {
         red: 12,
@@ -84,12 +83,20 @@ fn main() -> std::io::Result<()> {
         let game_id = get_regex_from_str(line, "Game ([0-9]{1,})");
         let max_game = get_max_game_colours_from_line(line);
         let result = check_game(&game, &max_game);
-        
+
         if result {
             day_1_count += game_id;
         }
         day_2_count += max_game.red * max_game.green * max_game.blue;
-        println!("Id: {}, day_1_count: {}, day_2_count {}, day_2_add {}, result: {}, color: {:?}", game_id, day_1_count, day_2_count, max_game.red * max_game.green * max_game.blue, result, max_game);
+        println!(
+            "Id: {}, day_1_count: {}, day_2_count {}, day_2_add {}, result: {}, color: {:?}",
+            game_id,
+            day_1_count,
+            day_2_count,
+            max_game.red * max_game.green * max_game.blue,
+            result,
+            max_game
+        );
     }
 
     Ok(())
@@ -97,10 +104,10 @@ fn main() -> std::io::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{get_max_game_colours_from_line, check_game, Game};
+    use crate::{check_game, get_max_game_colours_from_line, Game};
     #[test]
     fn test1() {
-        let line:String = "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green".to_string();
+        let line: String = "Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -112,7 +119,8 @@ mod tests {
     }
     #[test]
     fn test2() {
-        let line:String = "Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue".to_string();
+        let line: String =
+            "Game 2: 1 blue, 2 green; 3 green, 4 blue, 1 red; 1 green, 1 blue".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -124,7 +132,8 @@ mod tests {
     }
     #[test]
     fn test3() {
-        let line:String = "Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red".to_string();
+        let line: String =
+            "Game 3: 8 green, 6 blue, 20 red; 5 blue, 4 red, 13 green; 5 green, 1 red".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -136,7 +145,8 @@ mod tests {
     }
     #[test]
     fn test4() {
-        let line:String = "Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red".to_string();
+        let line: String =
+            "Game 4: 1 green, 3 red, 6 blue; 3 green, 6 red; 3 green, 15 blue, 14 red".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -148,7 +158,7 @@ mod tests {
     }
     #[test]
     fn test5() {
-        let line:String = "Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green".to_string();
+        let line: String = "Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -160,7 +170,7 @@ mod tests {
     }
     #[test]
     fn test_toomanyblue() {
-        let line:String = "Game 5: 6 red, 1 blue, 3 green; 20 blue, 1 red, 2 green".to_string();
+        let line: String = "Game 5: 6 red, 1 blue, 3 green; 20 blue, 1 red, 2 green".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -172,7 +182,7 @@ mod tests {
     }
     #[test]
     fn test_toomanyred() {
-        let line:String = "Game 5: 6 red, 1 blue, 3 green; 1 blue, 20 red, 2 green".to_string();
+        let line: String = "Game 5: 6 red, 1 blue, 3 green; 1 blue, 20 red, 2 green".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -184,7 +194,7 @@ mod tests {
     }
     #[test]
     fn test_toomanygreen() {
-        let line:String = "Game 5: 6 red, 1 blue, 3 green; 1 blue, 1 red, 20 green".to_string();
+        let line: String = "Game 5: 6 red, 1 blue, 3 green; 1 blue, 1 red, 20 green".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -232,7 +242,7 @@ mod tests {
     }
     #[test]
     fn test_id_53() {
-        let line:String = "Game 53: 1 blue, 9 green; 1 red, 2 green; 7 green, 1 red".to_string();
+        let line: String = "Game 53: 1 blue, 9 green; 1 red, 2 green; 7 green, 1 red".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -244,7 +254,7 @@ mod tests {
     }
     #[test]
     fn test_exact_green() {
-        let line:String = "13 green".to_string();
+        let line: String = "13 green".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -256,7 +266,7 @@ mod tests {
     }
     #[test]
     fn test_exact_blue() {
-        let line:String = "Game 5: 14 blue".to_string();
+        let line: String = "Game 5: 14 blue".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -269,7 +279,7 @@ mod tests {
     }
     #[test]
     fn test_exact_red() {
-        let line:String = "Game 5: 12 red".to_string();
+        let line: String = "Game 5: 12 red".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -282,7 +292,7 @@ mod tests {
     }
     #[test]
     fn test_1more_green() {
-        let line:String = "14 green".to_string();
+        let line: String = "14 green".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -295,7 +305,7 @@ mod tests {
     }
     #[test]
     fn test_1more_blue() {
-        let line:String = "Game 5: 15 blue".to_string();
+        let line: String = "Game 5: 15 blue".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -308,7 +318,7 @@ mod tests {
     }
     #[test]
     fn test_1more_red() {
-        let line:String = "Game 5: 13 red".to_string();
+        let line: String = "Game 5: 13 red".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -321,7 +331,7 @@ mod tests {
     }
     #[test]
     fn test_1less_green() {
-        let line:String = "12 green".to_string();
+        let line: String = "12 green".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -334,7 +344,7 @@ mod tests {
     }
     #[test]
     fn test_1less_blue() {
-        let line:String = "Game 5: 13 blue".to_string();
+        let line: String = "Game 5: 13 blue".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -347,7 +357,7 @@ mod tests {
     }
     #[test]
     fn test_1less_red() {
-        let line:String = "Game 5: 11 red".to_string();
+        let line: String = "Game 5: 11 red".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -358,5 +368,4 @@ mod tests {
 
         assert_eq!(result, true);
     }
-
 }
