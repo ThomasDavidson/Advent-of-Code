@@ -82,11 +82,8 @@ fn get_number_from_lines(
     count
 }
 
-fn main() {
+fn first_try_day_1(lines: Vec<&str>) -> i32 {
     let mut count: i32 = 0;
-    let input = include_str!("../input.txt");
-    let lines: Vec<&str> = input.lines().collect();
-
 
     for pos in 0..lines.len() {
         let line = lines.get(pos).unwrap();
@@ -95,8 +92,16 @@ fn main() {
 
         count += get_number_from_lines(line, previous_line, next_line);
     }
-    println!("count: {}", count);
-    println!("Number of lines: {}", lines.len());
+    count
+}
+
+fn main() {
+    let input = include_str!("../input.txt");
+    let lines: Vec<&str> = input.lines().collect();
+
+    let day_1_result: i32 = first_try_day_1(lines);
+
+    println!("Day 1 result: {}", day_1_result);
 }
 
 #[cfg(test)]
