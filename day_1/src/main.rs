@@ -43,6 +43,10 @@ fn get_word_from_line(line: &str) -> Result<i32, ParseIntError> {
     }
     // print result
 
+    if first_digit.to_string().len() != 1 || last_digit.to_string().len() != 1 {
+        panic!("String len isn't one character");
+    }
+
     let combined_string = first_digit.to_string() + &last_digit.to_string();
 
     print!(" combined: \"{}\"", combined_string);
