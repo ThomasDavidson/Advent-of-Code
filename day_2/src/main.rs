@@ -69,8 +69,6 @@ fn main() -> std::io::Result<()> {
         blue: 14,
     };
 
-    // print!("Num: {:?}", game_id);
-
     let mut day_1_count: i32 = 0;
     let mut day_2_count: i32 = 0;
 
