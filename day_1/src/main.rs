@@ -1,48 +1,45 @@
 use std::num::ParseIntError;
 
 fn get_word_from_line(line: &str, parse_str_num: bool) -> Result<i32, ParseIntError> {
+    let letters: [&str; 9] = [
+        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+    ];
 
     let mut first_digit: char = ' ';
     let mut first_digit_location: i32 = (line.len() + 1) as i32;
     let mut last_digit: char = ' ';
     let mut last_digit_location: i32 = -1;
 
-    print!("line: {} ", line);
-
-
     // check for string numbers by iterating through the string letters
     if parse_str_num {
-    for (i, letter) in letters.iter().enumerate() {
-        let find_letter = line.match_indices(letter);
+        for (i, letter) in letters.iter().enumerate() {
+            let find_letter = line.match_indices(letter);
 
-        for (pos, _) in find_letter{
-            if first_digit_location > pos as i32 {
-                first_digit_location = pos as i32 ;
-                first_digit = char::from_digit((i + 1) as u32, 10).unwrap();    
-            }
-            if last_digit_location < pos as i32 {
-                last_digit_location = pos as i32 ;
-                last_digit = char::from_digit((i + 1) as u32, 10).unwrap();
+            for (pos, _) in find_letter {
+                if first_digit_location > pos as i32 {
+                    first_digit_location = pos as i32;
+                    first_digit = char::from_digit((i + 1) as u32, 10).unwrap();
+                }
+                if last_digit_location < pos as i32 {
+                    last_digit_location = pos as i32;
+                    last_digit = char::from_digit((i + 1) as u32, 10).unwrap();
                 }
             }
         }
-
     }
 
     for (i, letter) in line.chars().enumerate() {
-
         if letter.is_numeric() {
-            if first_digit_location > i as i32{
+            if first_digit_location > i as i32 {
                 first_digit_location = i as i32;
-                first_digit = letter;    
+                first_digit = letter;
             }
-            if last_digit_location < i as i32{
+            if last_digit_location < i as i32 {
                 last_digit_location = i as i32;
                 last_digit = letter;
             }
         }
     }
-    // print result
 
     if first_digit.to_string().len() != 1 || last_digit.to_string().len() != 1 {
         panic!("String len isn't one character");
@@ -50,22 +47,17 @@ fn get_word_from_line(line: &str, parse_str_num: bool) -> Result<i32, ParseIntEr
 
     let combined_string = first_digit.to_string() + &last_digit.to_string();
 
-    print!(" combined: \"{}\"", combined_string);
-
-
-
     let result: Result<i32, _> = combined_string.parse();
 
     return result;
-
 }
 
 fn main() -> std::io::Result<()> {
     let input = include_str!("../input.txt");
 
-    let lines:Vec<&str> = input.lines().collect();
+    let mut lines: Vec<&str> = input.lines().collect();
 
-    let mut count:i32 = 0;
+    let mut count: i32 = 0;
 
     for line in lines {
         let result: Result<i32, _> = get_word_from_line(line, false);
@@ -73,14 +65,22 @@ fn main() -> std::io::Result<()> {
             Ok(v) => count += v,
             Err(e) => panic!("{:?}\n", e.kind()),
         }
-
-        print!(" count: {}\n", count);
-        
     }
-    print!("Final count: {}", count);
+    println!("Day 1 result: {}", count);
+
+    lines = input.lines().collect();
+    count = 0;
+    for line in lines {
+        let result: Result<i32, _> = get_word_from_line(line, true);
+        match result {
+            Ok(v) => count += v,
+            Err(e) => panic!("{:?}\n", e.kind()),
+        }
+    }
+    println!("Day 2 result: {}", count);
+
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {
