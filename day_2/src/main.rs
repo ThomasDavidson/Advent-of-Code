@@ -1,7 +1,4 @@
 use regex::Regex;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
 
 #[derive(Debug)]
 struct Game {
@@ -61,12 +58,10 @@ fn check_game(game: &Game, check: &Game) -> bool {
 }
 
 fn main() -> std::io::Result<()> {
-    let file = File::open("input.txt")?;
-    let mut buf_reader = BufReader::new(file);
-    let mut contents = String::new();
-    buf_reader.read_to_string(&mut contents)?;
+    let input = include_str!("../input.txt");
 
-    let lines: Vec<&str> = contents.split("\r\n").collect();
+    let lines: Vec<&str> = input.lines().collect();
+
 
     let game = Game {
         red: 12,
