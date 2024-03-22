@@ -100,20 +100,21 @@ struct Coord {
 }
 
 fn check_adjacent_spaces(
-    lines: Vec<&str>,
+    lines: &Vec<&str>,
     coord: Coord,
-    offset_to_check: Vec<[i16; 2]>,
-    checked_coords: Vec<Coord>,
-) -> [Vec<Coord>; 2] {
-    let mut new_checked_coords: Vec<Coord> = checked_coords.clone();
+    offset_to_check: &Vec<[i16; 2]>,
+    mut checked_coords: &mut Vec<Coord>,
+) -> Vec<Coord> {
     let mut askii_coords: Vec<Coord> = Vec::new();
     let height = lines.len();
     let width = lines[0].len();
 
     // push current coord
-    if !new_checked_coords.contains(&coord) {
-        new_checked_coords.push(coord);
+    if !checked_coords.contains(&coord) {
+        checked_coords.push(coord);
     }
+
+    println!("new_checked_coords {}", checked_coords.len());
 
     for [i, j] in offset_to_check {
         // get coordinate to check
@@ -129,10 +130,10 @@ fn check_adjacent_spaces(
             y: offset_y as usize,
         };
 
-        if new_checked_coords.contains(&new_coord) {
+        if checked_coords.contains(&new_coord) {
             continue;
         }
-        new_checked_coords.push(new_coord);
+        checked_coords.push(new_coord);
 
         let line = lines[offset_y as usize];
         let letter = line.as_bytes()[offset_x as usize];
@@ -144,17 +145,16 @@ fn check_adjacent_spaces(
         let secondary_check_coords = vec![[-1, 0], [1, 0]];
 
         // println!("Letter: {}", letter as char);
-        let mut res: [Vec<Coord>; 2] = check_adjacent_spaces(
-            lines.clone(),
+        let mut res: Vec<Coord> = check_adjacent_spaces(
+            &lines,
             new_coord,
-            secondary_check_coords,
-            new_checked_coords.clone(),
+            &secondary_check_coords,
+            &mut checked_coords,
         );
-        askii_coords.append(&mut res[0]);
-        new_checked_coords = res[1].clone();
+        askii_coords.append(&mut res);
     }
 
-    [askii_coords, new_checked_coords]
+    askii_coords
 }
 
 fn debug_print(height: usize, width: usize, checked_coords: Vec<Coord>, askii_coords: Vec<Coord>) {
@@ -254,18 +254,17 @@ fn main() {
             if lines[y].as_bytes()[x] == b'*' {
                 println!("Checking {} {}", x, y);
                 // check all adjacent spaces
-                let mut res = check_adjacent_spaces(
-                    lines.clone(),
+                let res = check_adjacent_spaces(
+                    &lines,
                     Coord { x: x, y: y },
-                    offset_to_check.clone(),
-                    checked_coords.clone(),
+                    &offset_to_check,
+                    &mut checked_coords,
                 );
 
-                askii_coords.append(&mut res[0].clone());
-                checked_coords.append(&mut res[1]);
+                askii_coords.append(&mut res.clone());
 
                 println!("combine_letters_to_numbers");
-                let gear_ratoios = combine_letters_to_numbers(lines.clone(), res[0].clone());
+                let gear_ratoios = combine_letters_to_numbers(lines.clone(), res.clone());
                 println!("{:?}", gear_ratoios);
                 if gear_ratoios.len() == 2 {
                     println!("adding: {}", gear_ratoios[0] * gear_ratoios[1]);
