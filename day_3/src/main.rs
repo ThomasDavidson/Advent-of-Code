@@ -4,8 +4,6 @@ fn has_special_char(compare_top: &str, start_cmp_val: usize, end_value: usize) -
     match compare_top_section {
         Some(val) => {
             let res = val.chars().any(|c| !c.is_numeric() && c != '.');
-            // println!("String: \"{}\", result: {}", val, res);
-
             res
         }
         None => panic!("No value found"),
@@ -71,7 +69,6 @@ fn get_number_from_lines(
             };
 
             if compare_check || top_check || bottom_check {
-                // println!("part number add: {}", part_number);
                 count += part_number;
             }
 
@@ -95,13 +92,194 @@ fn first_try_day_1(lines: Vec<&str>) -> i32 {
     count
 }
 
+// y then x is so vectors get sorted properly
+#[derive(PartialEq, Debug, Clone, Copy, Eq, PartialOrd, Ord)]
+struct Coord {
+    y: usize,
+    x: usize,
+}
+
+fn check_adjacent_spaces(
+    lines: Vec<&str>,
+    coord: Coord,
+    offset_to_check: Vec<[i16; 2]>,
+    checked_coords: Vec<Coord>,
+) -> [Vec<Coord>; 2] {
+    let mut new_checked_coords: Vec<Coord> = checked_coords.clone();
+    let mut askii_coords: Vec<Coord> = Vec::new();
+    let height = lines.len();
+    let width = lines[0].len();
+
+    // push current coord
+    if !new_checked_coords.contains(&coord) {
+        new_checked_coords.push(coord);
+    }
+
+    for [i, j] in offset_to_check {
+        // get coordinate to check
+        let offset_x = coord.x as i16 + i;
+        let offset_y = coord.y as i16 + j;
+
+        // checks if x or y offset is negative or out of bounds
+        if offset_x < 0 || offset_x >= width as i16 || offset_y < 0 || offset_y >= height as i16 {
+            continue;
+        }
+        let new_coord = Coord {
+            x: offset_x as usize,
+            y: offset_y as usize,
+        };
+
+        if new_checked_coords.contains(&new_coord) {
+            continue;
+        }
+        new_checked_coords.push(new_coord);
+
+        let line = lines[offset_y as usize];
+        let letter = line.as_bytes()[offset_x as usize];
+        if !letter.is_ascii_digit() {
+            continue;
+        }
+        askii_coords.push(new_coord);
+        // check coordinates to the left and right of the askii
+        let secondary_check_coords = vec![[-1, 0], [1, 0]];
+
+        // println!("Letter: {}", letter as char);
+        let mut res: [Vec<Coord>; 2] = check_adjacent_spaces(
+            lines.clone(),
+            new_coord,
+            secondary_check_coords,
+            new_checked_coords.clone(),
+        );
+        askii_coords.append(&mut res[0]);
+        new_checked_coords = res[1].clone();
+    }
+
+    [askii_coords, new_checked_coords]
+}
+
+fn debug_print(height: usize, width: usize, checked_coords: Vec<Coord>, askii_coords: Vec<Coord>) {
+    let mut char_2d: Vec<Vec<char>> = Vec::new();
+    for _y in 0..height {
+        let mut char_1d: Vec<char> = Vec::new();
+        for _x in 0..width {
+            char_1d.push('.');
+        }
+        char_2d.push(char_1d)
+    }
+
+    for coord in checked_coords {
+        char_2d[coord.y][coord.x] = 'c';
+    }
+
+    for coord in askii_coords {
+        char_2d[coord.y][coord.x] = 'a';
+    }
+
+    for y in 0..height {
+        for x in 0..width {
+            print!("{}", char_2d[y][x]);
+        }
+        println!("");
+    }
+}
+
+fn combine_letters_to_numbers(lines: Vec<&str>, mut number_coords: Vec<Coord>) -> Vec<i32> {
+    let mut ret: Vec<i32> = Vec::new();
+    let mut string: String = Default::default();
+    let mut last_coord = Coord { x: 0, y: 0 };
+
+    // println!("number_coords: {}", number_coords.len());
+
+    number_coords.sort();
+    println!("number_coords: {:?}", number_coords);
+
+    for number_coord in number_coords {
+        if last_coord.y != number_coord.y || last_coord.x + 1 != number_coord.x {
+            if !string.is_empty() {
+                let value = string.parse::<i32>().unwrap();
+                ret.push(value);
+
+                string.clear();
+            }
+        }
+
+        let line = lines[number_coord.y];
+        let letter = line.as_bytes()[number_coord.x];
+        string.push(letter as char);
+        // println!("String: {} Char: {}", string, letter as char);
+
+        last_coord = number_coord;
+    }
+
+    if !string.is_empty() {
+        let value = string.parse::<i32>().unwrap();
+        ret.push(value);
+
+        string.clear();
+    }
+
+    ret
+}
+
 fn main() {
     let input = include_str!("../input.txt");
-    let lines: Vec<&str> = input.lines().collect();
 
-    let day_1_result: i32 = first_try_day_1(lines);
-
+    let day_1_result: i32 = first_try_day_1(input.lines().collect());
     println!("Day 1 result: {}", day_1_result);
+
+    let str_in = input.to_string();
+
+    let lines: Vec<&str> = str_in.lines().collect();
+    let width = lines[0].len();
+    let height = lines.len();
+
+    // offsets from -1..1, -1..1 excluding 0,0
+    let offset_to_check: Vec<[i16; 2]> = vec![
+        [-1, 1],
+        [0, 1],
+        [1, 1],
+        [-1, 0],
+        [1, 0],
+        [-1, -1],
+        [0, -1],
+        [1, -1],
+    ];
+
+    let mut askii_coords: Vec<Coord> = Vec::new();
+    let mut checked_coords: Vec<Coord> = Vec::new();
+    let mut day_2_result: i32 = 0;
+
+    for y in 0..height {
+        for x in 0..width {
+            if lines[y].as_bytes()[x] == b'*' {
+                println!("Checking {} {}", x, y);
+                // check all adjacent spaces
+                let mut res = check_adjacent_spaces(
+                    lines.clone(),
+                    Coord { x: x, y: y },
+                    offset_to_check.clone(),
+                    checked_coords.clone(),
+                );
+
+                askii_coords.append(&mut res[0].clone());
+                checked_coords.append(&mut res[1]);
+
+                println!("combine_letters_to_numbers");
+                let gear_ratoios = combine_letters_to_numbers(lines.clone(), res[0].clone());
+                println!("{:?}", gear_ratoios);
+                if gear_ratoios.len() == 2 {
+                    println!("adding: {}", gear_ratoios[0] * gear_ratoios[1]);
+                    day_2_result += gear_ratoios[0] * gear_ratoios[1];
+                }
+                println!("day_2_result: {}", day_2_result);
+            }
+        }
+    }
+    // println!("askii_coords: {:?}", askii_coords);
+    askii_coords.sort();
+    // println!("askii_coords: {:?}", askii_coords);
+
+    debug_print(height, width, checked_coords, askii_coords);
 }
 
 #[cfg(test)]
