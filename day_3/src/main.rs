@@ -114,8 +114,6 @@ fn check_adjacent_spaces(
         checked_coords.push(coord);
     }
 
-    println!("new_checked_coords {}", checked_coords.len());
-
     for [i, j] in offset_to_check {
         // get coordinate to check
         let offset_x = coord.x as i16 + i;
@@ -191,7 +189,7 @@ fn combine_letters_to_numbers(lines: Vec<&str>, mut number_coords: Vec<Coord>) -
     // println!("number_coords: {}", number_coords.len());
 
     number_coords.sort();
-    println!("number_coords: {:?}", number_coords);
+    // println!("number_coords: {:?}", number_coords);
 
     for number_coord in number_coords {
         if last_coord.y != number_coord.y || last_coord.x + 1 != number_coord.x {
@@ -252,7 +250,7 @@ fn main() {
     for y in 0..height {
         for x in 0..width {
             if lines[y].as_bytes()[x] == b'*' {
-                println!("Checking {} {}", x, y);
+                // println!("Checking {} {}", x, y);
                 // check all adjacent spaces
                 let res = check_adjacent_spaces(
                     &lines,
@@ -263,17 +261,16 @@ fn main() {
 
                 askii_coords.append(&mut res.clone());
 
-                println!("combine_letters_to_numbers");
                 let gear_ratoios = combine_letters_to_numbers(lines.clone(), res.clone());
-                println!("{:?}", gear_ratoios);
+                // println!("{:?}", gear_ratoios);
                 if gear_ratoios.len() == 2 {
-                    println!("adding: {}", gear_ratoios[0] * gear_ratoios[1]);
+                    // println!("adding: {}", gear_ratoios[0] * gear_ratoios[1]);
                     day_2_result += gear_ratoios[0] * gear_ratoios[1];
                 }
-                println!("day_2_result: {}", day_2_result);
             }
         }
     }
+    println!("day_2_result: {}", day_2_result);
     // println!("askii_coords: {:?}", askii_coords);
     askii_coords.sort();
     // println!("askii_coords: {:?}", askii_coords);
