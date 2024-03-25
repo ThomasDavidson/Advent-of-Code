@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 fn get_number_lists(lines: &str) -> Vec<[i64; 3]> {
     let mut maps: Vec<Vec<i64>> = vec![];
     let mut array_maps: Vec<[i64; 3]> = Vec::new();
@@ -39,15 +41,49 @@ fn calculate_map_value(value: i64, maps: &Vec<[i64; 3]>) -> i64 {
 fn get_location_from_seed(seed: i64, maps: &Vec<Vec<[i64; 3]>>) -> i64 {
     let mut res = seed;
     for map in maps {
-        // print!(" {}", res);
+        print!(" {}", res);
         res = calculate_map_value(res, map);
     }
-    // println!(" {}", res);
+    println!(" {}", res);
     res
 }
 
+fn get_location_from_hash_maps(seed: i64, hash_maps: Vec<HashMap<i64, i64>>) -> i64 {
+    let mut res = seed;
+    for hash_map in hash_maps {
+        res = match hash_map.get(&res) {
+            Some(val) => val.to_owned(),
+            None => res,
+        };
+
+        print!(" {}", res);
+    }
+    println!(" {}", res);
+    res
+}
+
+fn create_hash_map_from_map(maps: &Vec<[i64; 3]>) -> HashMap<i64, i64> {
+    let mut hash_map: HashMap<i64, i64> = HashMap::new();
+
+    for map in maps {
+        let source = map[0];
+        let destination = map[1];
+        let range = map[2];
+
+        for i in 0..range {
+            let res = hash_map.insert(source + i, destination + 1);
+            print!("Insert result {:?}", res);
+            print!("Ins {}->{} ", source + i, destination + i);
+            print!(", Get {}->{} ", source + i, hash_map.get(&(source + i)).unwrap());
+            println!("");
+        }
+    }
+
+    hash_map
+}
+
 fn main() {
-    let input: &str = include_str!("../input.txt");
+    let input: &str = include_str!("../example.txt");
 
     let mut sections = input.split("\r\n\r\n");
 
@@ -62,17 +98,21 @@ fn main() {
         .collect();
 
     let mut seed_map_maps: Vec<Vec<[i64; 3]>> = Vec::new();
+    let mut seed_map_hash_map: Vec<HashMap<i64, i64>> = Vec::new();
 
     for section in sections {
         let maps: Vec<[i64; 3]> = get_number_lists(section);
         // println!("{:?}", maps);
-        seed_map_maps.push(maps)
+        seed_map_maps.push(maps.clone());
+        seed_map_hash_map.push(create_hash_map_from_map(&maps));
     }
 
     let mut day_1_answer: Vec<i64> = vec![];
     for seed in seed_nums.clone() {
-        let location = get_location_from_seed(seed, &seed_map_maps);
+        get_location_from_seed(seed, &seed_map_maps);
+        let location = get_location_from_hash_maps(seed, seed_map_hash_map.clone());
 
+        println!("");
         day_1_answer.push(location);
     }
     println!("day_1_answer: {:?}", day_1_answer.iter().min());
