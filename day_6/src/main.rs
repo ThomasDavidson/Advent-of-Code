@@ -135,4 +135,14 @@ mod tests {
 
         assert_eq!(margin, 11);
     }
+    #[test]
+    fn check_margin_4_precision_test() {
+        let race = Race {
+            time: 40000000,
+            distance: 50000000000,
+        };
+        let margin: i64 = calculate_time_margin(&race);
+
+        assert_eq!(margin, 39997499);
+    }
 }
