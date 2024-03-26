@@ -2,35 +2,39 @@ use roots::find_roots_quadratic;
 use roots::Roots;
 use std::iter::zip;
 
+#[derive(Debug)]
 struct Race {
-    time: i32,
-    distance: i32,
+    time: i64,
+    distance: i64,
 }
 
-fn calculate_time_margin(race: &Race) -> u64 {
-    let a: f32 = -1f32;
-    let b: f32 = race.time as f32;
-    let c: f32 = -race.distance as f32;
-    let root = find_roots_quadratic(a, b, c);
+fn calculate_time_margin(race: &Race) -> i64 {
+    let a: f64 = -1f64;
+    let b: f64 = race.time as f64;
+    let c: f64 = -race.distance as f64;
+    let root: Roots<f64> = find_roots_quadratic(a, b, c);
 
     println!("{:?}", root);
 
-    let roots: [f32;2] = match root {
+    let roots: [f64; 2] = match root {
         Roots::Two([x1, x2]) => [x1, x2],
         _ => panic!("Should not be none"),
     };
-    let mut ret = 0;
 
-    let min_iter = roots[0].floor() as i32;
-    let max_iter = roots[1].ceil() as i32;
+    let min_iter = roots[0].ceil() as i64;
+    let max_iter = roots[1].floor() as i64;
 
-    for i in min_iter..max_iter {
-        if (i as f32) > roots[0] && (i as f32) < roots[1] {
-            ret = ret + 1;
-        }
-    }
+    println!("Win max: {} min: {}", max_iter, min_iter);
 
-    return ret;
+    let diff = max_iter - min_iter + 1;
+
+    // for i in min_iter..max_iter {
+    //     if (i as f64) > roots[0] && (i as f64) < roots[1] {
+    //         ret = ret + 1;
+    //     }
+    // }
+
+    return diff;
 }
 
 fn main() {
@@ -38,14 +42,14 @@ fn main() {
 
     println!("{}", input);
 
-    let mut times: Vec<i32> = vec![];
-    let mut distances: Vec<i32> = vec![];
+    let mut times: Vec<i64> = vec![];
+    let mut distances: Vec<i64> = vec![];
 
     let mut day_1_races: Vec<Race> = vec![];
 
     for (i, line) in input.lines().enumerate() {
         for day_1_races in line.split_whitespace() {
-            let val = day_1_races.parse::<i32>();
+            let val = day_1_races.parse::<i64>();
 
             match val {
                 Err(_e) => (),
@@ -69,15 +73,31 @@ fn main() {
         day_1_races.push(race);
     }
 
-    let mut day_1_answer: u64 = 1;
+    let mut day_1_answer: i64 = 1;
 
-    for race in day_1_races {
-        let margin: u64 = calculate_time_margin(&race);
-        println!("distance: {} time: {} margin: {}", race.distance, race.time, margin);
+    for race in &day_1_races {
+        let margin: i64 = calculate_time_margin(&race);
+        // println!("distance: {} time: {} margin: {}", race.distance, race.time, margin);
 
         day_1_answer = day_1_answer * margin;
     }
     println!("day_1_answer: {}", day_1_answer);
+
+    let mut day_2_time_str: String = Default::default();
+    let mut day_2_distance_str: String = Default::default();
+    for race in &day_1_races {
+        day_2_time_str.push_str(&race.time.to_string());
+        day_2_distance_str.push_str(&race.distance.to_string());
+    }
+
+    let day_2_race = Race {
+        time: day_2_time_str.parse::<i64>().unwrap(),
+        distance: day_2_distance_str.parse::<i64>().unwrap(),
+    };
+    println!("{:?}", day_2_race);
+
+    let day_2_answer: i64 = calculate_time_margin(&day_2_race);
+    println!("Day 2 margin: {}", day_2_answer);
 }
 
 #[cfg(test)]
@@ -89,7 +109,7 @@ mod tests {
             time: 7,
             distance: 9,
         };
-        let margin: u64 = calculate_time_margin(&race);
+        let margin: i64 = calculate_time_margin(&race);
 
         assert_eq!(margin, 4);
     }
@@ -100,7 +120,7 @@ mod tests {
             time: 15,
             distance: 40,
         };
-        let margin: u64 = calculate_time_margin(&race);
+        let margin: i64 = calculate_time_margin(&race);
 
         assert_eq!(margin, 8);
     }
@@ -111,7 +131,7 @@ mod tests {
             time: 30,
             distance: 200,
         };
-        let margin: u64 = calculate_time_margin(&race);
+        let margin: i64 = calculate_time_margin(&race);
 
         assert_eq!(margin, 9);
     }
