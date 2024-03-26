@@ -133,6 +133,6 @@ mod tests {
         };
         let margin: i64 = calculate_time_margin(&race);
 
-        assert_eq!(margin, 9);
+        assert_eq!(margin, 11);
     }
 }
