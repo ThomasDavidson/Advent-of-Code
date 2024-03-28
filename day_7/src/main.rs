@@ -96,23 +96,62 @@ fn hand_text_to_hand_struct(hand_line: &str) -> Hand {
     hand
 }
 
-fn maximize_card_score_with_joker(hand: Hand) -> HandType {
-
+fn maximize_card_score_with_joker(hand: &Hand) -> HandType {
     let joker_num = hand.hand_array.iter().filter(|&a| *a == 'J').count();
-    println!("Hand: {:?}, Js: {}", hand.hand_array, joker_num);
+    let mut hightest_non_joker: u8 = 0;
+    let mut second_hightest_non_joker: u8 = 0;
 
-    match joker_num {
-        0 => hand,
-        1 => hand,
-        2 => hand,
-        3 => hand,
-        4 => hand,
-        5 => hand,
-        _ => panic!("Above condition should match all"),
-    };
+    for i in 0..3 {
+        if hand.card_stat[i].face == 'J' {
+            continue;
+        }
+        if hightest_non_joker == 0 {
+            hightest_non_joker = hand.card_stat[i].count;
+        } else if second_hightest_non_joker == 0 {
+            second_hightest_non_joker = hand.card_stat[i].count;
+        }
+    }
 
-    HandType::FiveOfaKind
-    
+    // joker, highest non joker, second highest non joker
+    let match_tuple = (joker_num, hightest_non_joker, second_hightest_non_joker);
+
+    match match_tuple {
+        (0, ..) => hand.kind,
+        (5, ..) => HandType::FiveOfaKind,
+        (1, 4, ..) => HandType::FiveOfaKind,
+        (2, 3, ..) => HandType::FiveOfaKind,
+        (3, 2, ..) => HandType::FiveOfaKind,
+        (4, 1, ..) => HandType::FiveOfaKind,
+        (1, 3, ..) => HandType::FourOfaKind,
+        (2, 2, ..) => HandType::FourOfaKind,
+        (3, 1, ..) => HandType::FourOfaKind,
+        (1, 2, 2) => HandType::FullHouse,
+        (1, 2, ..) => HandType::ThreeOfaKind,
+        (2, 1, 1) => HandType::ThreeOfaKind,
+        (1, 1, 1) => HandType::OnePair,
+        _ => panic!("Above condition should match all {:?}", hand.hand_array),
+    }
+}
+
+fn calculate_answer(hands: &mut Vec<Hand>, card_order: &HashMap<char, i32>) -> u64 {
+    // reverse sort to easily calculate score
+    hands.sort_by(|a, b| {
+        let mut sort = b.kind.cmp(&a.kind);
+
+        for i in 0..5 {
+            let a_score = card_order.get(&a.hand_array[i]).unwrap();
+            let b_score = card_order.get(&b.hand_array[i]).unwrap();
+            sort = sort.then(a_score.cmp(b_score));
+        }
+        sort
+    });
+
+    let mut score: u64 = 0;
+    for (i, hand) in hands.iter().enumerate() {
+        let hand_score = (i + 1) as u64 * hand.bid;
+        score += hand_score;
+    }
+    score
 }
 
 fn main() {
@@ -142,14 +181,20 @@ fn main() {
 
     let day_1_score = calculate_answer(&mut hands, &day_1_card_cmp);
     println!("day 1 score: {}", day_1_score);
-    
+
     let mut day_2_card_cmp = day_1_card_cmp.clone();
     day_2_card_cmp.insert('J', 1);
-    
-    
-    for hand in hands {
-        // println!("{:?}", hand);
-        maximize_card_score_with_joker(hand);
-    }
 
+    for hand in &mut hands {
+        let new_kind = maximize_card_score_with_joker(hand);
+
+        let mut print_sort = hand.hand_array.clone();
+        print_sort.sort();
+        if hand.kind != new_kind {
+            hand.kind = new_kind;
+        }
+    }
+    let day_2_score = calculate_answer(&mut hands, &day_2_card_cmp);
+
+    println!("day 2 score: {}", day_2_score);
 }
