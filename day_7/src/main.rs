@@ -188,8 +188,6 @@ fn main() {
     for hand in &mut hands {
         let new_kind = maximize_card_score_with_joker(hand);
 
-        let mut print_sort = hand.hand_array.clone();
-        print_sort.sort();
         if hand.kind != new_kind {
             hand.kind = new_kind;
         }
