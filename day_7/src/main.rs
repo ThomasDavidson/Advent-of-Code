@@ -11,23 +11,32 @@ enum HandType {
     HighCard,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct CardStat {
+    count: u8,
+    face: char,
+}
+
 #[derive(Debug)]
 struct Hand {
     bid: u64,
-    hand_array: [char; 5],  // card array ex. KK677
-    card_count: [usize; 5], // card count descending ex. 22100
+    hand_array: [char; 5],    // card array ex. KK677
+    card_stat: [CardStat; 5], // card count descending ex. 22100
     kind: HandType,
-    hand_score: u64,
 }
 
-fn hand_text_to_hand_struct(hand_line: &str, card_order: &HashMap<char, i32>) -> Hand {
+fn hand_text_to_hand_struct(hand_line: &str) -> Hand {
     let mut hand = Hand {
         bid: 0,
         hand_array: ['0'; 5],
-        card_count: [0; 5],
+        card_stat: [CardStat {
+            count: 0,
+            face: '0',
+        }; 5],
         kind: HandType::HighCard,
-        hand_score: 0,
     };
+
+    let mut cards_count: [u8; 5] = [0; 5];
 
     let split_hand_vec: Vec<&str> = hand_line.split(' ').collect();
 
@@ -56,28 +65,25 @@ fn hand_text_to_hand_struct(hand_line: &str, card_order: &HashMap<char, i32>) ->
         // print!("{} ", c);
         let card_count: usize = hand_vec.iter().filter(|&a| *a == c).count();
         // println!("{} {}", c, card_count);
-        for i in &mut hand.card_count {
+        for i in &mut cards_count {
             if *i == 0 {
-                *i = card_count;
+                *i = card_count as u8;
+                break;
+            }
+        }
+        for i in &mut hand.card_stat {
+            if i.count == 0 {
+                i.count = card_count as u8;
+                i.face = c;
                 break;
             }
         }
     }
-    hand.card_count.sort_by(|a, b| b.cmp(a));
-
-    // hashed value of each card
-    for i in 0..5 {
-        let card_number_value = match card_order.get(&hand.hand_array[i]) {
-            Some(a) => *a as u64,
-            _ => panic!("Value not matched {}", hand.hand_array[i]),
-        };
-
-        hand.hand_score += card_number_value * 10_u64.pow(((4 - i) * 2).try_into().unwrap());
-        // print!("{} ", card_number_value);
-    }
+    cards_count.sort_by(|a, b| b.cmp(a));
+    hand.card_stat.sort_by(|a, b| b.count.cmp(&a.count));
 
     // hand kind
-    hand.kind = match hand.card_count {
+    hand.kind = match cards_count {
         [5, ..] => HandType::FiveOfaKind,
         [4, ..] => HandType::FourOfaKind,
         [3, 2, ..] => HandType::FullHouse,
@@ -128,33 +134,13 @@ fn main() {
         ('A', 14),
     ]);
 
-    let mut day_1_score: u64 = 0;
-
     let mut hands: Vec<Hand> = Vec::new();
 
     for line in input.lines() {
-        hands.push(hand_text_to_hand_struct(line, &day_1_card_cmp));
+        hands.push(hand_text_to_hand_struct(line));
     }
 
-    // reverse sort to easily calculate score
-    hands.sort_by(|a, b| {
-        let first = b.kind.cmp(&a.kind);
-        let second = a.hand_score.cmp(&b.hand_score);
-        first.then(second)
-    });
-
-    for (i, hand) in hands.iter().enumerate() {
-        let hand_score = (i + 1) as u64 * hand.bid;
-        day_1_score += hand_score;
-        // println!(
-        //     "Sum: {}, Hand Score: {} place: {} Hand: {:?}",
-        //     day_1_score,
-        //     hand_score,
-        //     i + 1,
-        //     hand
-        // );
-    }
-
+    let day_1_score = calculate_answer(&mut hands, &day_1_card_cmp);
     println!("day 1 score: {}", day_1_score);
     
     let mut day_2_card_cmp = day_1_card_cmp.clone();
