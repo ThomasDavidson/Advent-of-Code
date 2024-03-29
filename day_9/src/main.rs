@@ -29,10 +29,10 @@ fn generate_difference(prediction: &Vec<i64>) -> Vec<i64> {
     new_prediction
 }
 
-fn day_1(report: Vec<i64>) -> i64 {
+fn day_1(report: &Vec<i64>) -> i64 {
     let mut predictions: Vec<Vec<i64>> = Vec::new();
 
-    predictions.push(report);
+    predictions.push(report.to_owned());
 
     while !predictions.last().unwrap().iter().all(|&a| a == 0) {
         let prediction = generate_difference(predictions.last().unwrap());
@@ -57,6 +57,33 @@ fn day_1(report: Vec<i64>) -> i64 {
     predictions.first().unwrap().last().unwrap().to_owned()
 }
 
+fn day_2(report: &Vec<i64>) -> i64 {
+    let mut predictions: Vec<Vec<i64>> = Vec::new();
+
+    predictions.push(report.to_owned());
+
+    while !predictions.last().unwrap().iter().all(|&a| a == 0) {
+        let prediction = generate_difference(predictions.last().unwrap());
+
+        predictions.push(prediction);
+    }
+
+    for i in (0..predictions.len()).rev() {
+        // set bottom as zero
+        let is_bottom: bool = i == predictions.len() - 1;
+        let mut extrapolation: i64 = 0;
+        if !is_bottom {
+            let prev_row_first_num = predictions.get(i + 1).unwrap().first().unwrap();
+            let curr_row_first_num = predictions.get(i).unwrap().first().unwrap();
+            extrapolation = curr_row_first_num - prev_row_first_num;
+        }
+
+        let prediction: &mut Vec<i64> = predictions.get_mut(i).unwrap();
+        prediction.insert(0, extrapolation);
+    }
+    predictions.get(0).unwrap().first().unwrap().to_owned()
+}
+
 fn main() {
     let input = include_str!("../input.txt");
 
@@ -73,5 +100,17 @@ fn main() {
     println!(
         "day_1_result {:?}",
         day_1_results.into_iter().reduce(|a, b| a + b).unwrap()
+    );
+
+    let mut day_2_results: Vec<i64> = Vec::new();
+    for report in &reports {
+        let day_1_result = day_2(report);
+        day_2_results.push(day_1_result);
+    }
+
+    println!("day_2_results {:?}", day_2_results);
+    println!(
+        "day_2_result {:?}",
+        day_2_results.into_iter().reduce(|a, b| a + b).unwrap()
     );
 }
