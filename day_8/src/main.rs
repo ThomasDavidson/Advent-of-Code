@@ -73,8 +73,42 @@ fn get_day_1_answer(network: &HashMap<[char; 3], Node>, instructions: &Vec<char>
     day_1_answer
 }
 
+fn get_ring_length(network: &HashMap<[char; 3], Node>, node: &[char; 3]) -> u64 {
+    let node_ring_1 = network.get(node).unwrap();
+
+    let mut traverse_node: [char; 3] = node_ring_1.left;
+    let mut ring_len = 0;
+
+    while ring_len <= 1
+        || !(traverse_node == node_ring_1.left || traverse_node == node_ring_1.right)
+    {
+        traverse_node = network.get(&traverse_node).unwrap().left;
+        ring_len += 1;
+    }
+    ring_len
+}
+
+fn gcd(mut a: u64, mut b: u64) -> u64 {
+    while b != 0 {
+        let temp = b;
+        b = a % b;
+        a = temp;
+    }
+    a
+}
+
+fn lcm(a: u64, b: u64) -> u64 {
+    a / gcd(a, b) * b
+}
+
+fn lcm_of_vec(numbers: &[u64]) -> u64 {
+    numbers
+        .iter()
+        .fold(1, |lcm_so_far, &num| lcm(lcm_so_far, num))
+}
+
 fn main() {
-    let input = include_str!("../input.txt");
+    let input = include_str!("../example3.txt");
 
     let split_input: Vec<&str> = input.split("\r\n\r\n").collect();
 
@@ -85,4 +119,15 @@ fn main() {
     let day_1_answer = get_day_1_answer(&network, &instructions);
     println!("Day 1 Answer: {}", day_1_answer);
 
+    let day_2_starting: &Vec<&[char; 3]> = &network.keys().filter(|&a| a[2] == 'A').collect();
+
+    let mut ring_lengths: Vec<u64> = Vec::new();
+
+    for node in day_2_starting {
+        ring_lengths.push(get_ring_length(&network, node));
+    }
+
+    println!("ring_lengths: {:?}", ring_lengths);
+    let day_2_answer = lcm_of_vec(&ring_lengths);
+    println!("Day 2 Answer: {:?}", day_2_answer);
 }
