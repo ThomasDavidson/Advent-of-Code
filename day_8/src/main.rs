@@ -150,7 +150,7 @@ fn brute_force_part_2(
 }
 
 fn main() {
-    let input = include_str!("../example3.txt");
+    let input = include_str!("../input.txt");
 
     let split_input: Vec<&str> = input.split("\r\n\r\n").collect();
 
