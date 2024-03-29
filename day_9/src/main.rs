@@ -54,12 +54,7 @@ fn day_1(report: Vec<i64>) -> i64 {
         prediction.push(extrapolation);
     }
 
-    // for prediction in &predictions {
-    //     println!("prediction {:?}", prediction);
-    // }
-    // println!("");
-
-    predictions.get(0).unwrap().last().unwrap().to_owned()
+    predictions.first().unwrap().last().unwrap().to_owned()
 }
 
 fn main() {
@@ -70,12 +65,11 @@ fn main() {
     // println!("reports {:?}", reports);
 
     let mut day_1_results: Vec<i64> = Vec::new();
-    for report in reports {
+    for report in &reports {
         let day_1_result = day_1(report);
         day_1_results.push(day_1_result);
     }
 
-    println!("day_1_results {:?}", day_1_results);
     println!(
         "day_1_result {:?}",
         day_1_results.into_iter().reduce(|a, b| a + b).unwrap()
