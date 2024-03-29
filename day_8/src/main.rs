@@ -119,6 +119,36 @@ fn lcm_of_vec(numbers: &[u64]) -> u64 {
         .fold(1, |lcm_so_far, &num| lcm(lcm_so_far, num))
 }
 
+fn brute_force_part_2(
+    network: &HashMap<[char; 3], Node>,
+    instructions: &Vec<char>,
+    nodes: &Vec<&[char; 3]>,
+) -> u64 {
+    let mut day_2_current_nodes = nodes.clone();
+    let mut day_2_answer: u64 = 0;
+    let mut done: bool = false;
+
+    while !done {
+        for direction in instructions {
+            day_2_answer += 1;
+            for curr_node in &mut day_2_current_nodes {
+                let node = network.get(&curr_node as &[char; 3]).unwrap();
+                *curr_node = match direction {
+                    'L' => &node.left,
+                    'R' => &node.right,
+                    _ => panic!("Above should match all"),
+                };
+            }
+
+            if day_2_current_nodes.iter().all(|&a| a[2] == 'Z') {
+                done = true;
+                break;
+            }
+        }
+    }
+    day_2_answer
+}
+
 fn main() {
     let input = include_str!("../example3.txt");
 
