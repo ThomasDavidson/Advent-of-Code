@@ -122,7 +122,7 @@ fn lcm_of_vec(numbers: &[u64]) -> u64 {
 fn brute_force_part_2(
     network: &HashMap<[char; 3], Node>,
     instructions: &Vec<char>,
-    nodes: &Vec<&[char; 3]>,
+    nodes: &Vec<[char; 3]>,
 ) -> u64 {
     let mut day_2_current_nodes = nodes.clone();
     let mut day_2_answer: u64 = 0;
@@ -134,8 +134,8 @@ fn brute_force_part_2(
             for curr_node in &mut day_2_current_nodes {
                 let node = network.get(&curr_node as &[char; 3]).unwrap();
                 *curr_node = match direction {
-                    'L' => &node.left,
-                    'R' => &node.right,
+                    'L' => node.left,
+                    'R' => node.right,
                     _ => panic!("Above should match all"),
                 };
             }
@@ -161,19 +161,30 @@ fn main() {
     let day_1_answer = get_distance_to_z(&network, &instructions, ['A'; 3]);
     println!("Day 1 Answer: {}", day_1_answer);
 
-    let day_2_starting: &Vec<&[char; 3]> = &network.keys().filter(|&a| a[2] == 'A').collect();
+    let day_2_starting: Vec<[char; 3]> = network
+        .keys()
+        .filter(|&a| a[2] == 'A')
+        .map(|&a| a.clone())
+        .collect();
 
     let mut ring_lengths: Vec<u64> = Vec::new();
 
-    for node in day_2_starting {
-        ring_lengths.push(get_ring_length(&network, node));
-        println!(
-            "dis to z: {}",
-            get_distance_to_z(&network, &instructions, **node)
-        );
+    for node in &day_2_starting {
+        ring_lengths.push(get_ring_length(&network, &node));
     }
+    // add number of instructions
+    ring_lengths.push(instructions.len() as u64);
 
-    println!("ring_lengths: {:?}", ring_lengths);
     let day_2_answer = lcm_of_vec(&ring_lengths);
-    println!("Day 2 Answer: {:?}", day_2_answer);
+    println!("Day 2 lcs Answer: {:?}", day_2_answer);
+
+    // Skip brute force answer if it would take too long
+    if day_2_answer < 1000000 {
+        println!(
+            "Day 2 Brut Answer: {}",
+            brute_force_part_2(&network, &instructions, &day_2_starting)
+        );
+    } else {
+        println!("Day 2 Brut Answer skiped");
+    }
 }
