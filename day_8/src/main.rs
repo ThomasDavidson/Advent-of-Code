@@ -41,9 +41,21 @@ fn create_network(input: &str) -> HashMap<[char; 3], Node> {
     network
 }
 
-fn get_day_1_answer(network: &HashMap<[char; 3], Node>, instructions: &Vec<char>) -> u64 {
-    let mut curr_node: [char; 3] = ['A'; 3];
-    let solution: [char; 3] = ['Z'; 3];
+fn get_distance_to_z(
+    network: &HashMap<[char; 3], Node>,
+    instructions: &Vec<char>,
+    starting_node: [char; 3],
+) -> u64 {
+    let mut curr_node: [char; 3] = starting_node;
+    let solution: [char; 3] = match starting_node {
+        ['A', 'A', 'A'] => ['Z'; 3],
+        _ => {
+            let mut sol = starting_node;
+            sol[2] = 'Z';
+            sol
+        }
+    };
+
     let mut day_1_answer: u64 = 0;
 
     // print!("{}", String::from_iter(curr_node.to_owned().iter()));
@@ -116,7 +128,7 @@ fn main() {
 
     let network = create_network(split_input.get(1).unwrap());
 
-    let day_1_answer = get_day_1_answer(&network, &instructions);
+    let day_1_answer = get_distance_to_z(&network, &instructions, ['A'; 3]);
     println!("Day 1 Answer: {}", day_1_answer);
 
     let day_2_starting: &Vec<&[char; 3]> = &network.keys().filter(|&a| a[2] == 'A').collect();
@@ -125,6 +137,10 @@ fn main() {
 
     for node in day_2_starting {
         ring_lengths.push(get_ring_length(&network, node));
+        println!(
+            "dis to z: {}",
+            get_distance_to_z(&network, &instructions, **node)
+        );
     }
 
     println!("ring_lengths: {:?}", ring_lengths);
