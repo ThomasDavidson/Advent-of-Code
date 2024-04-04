@@ -91,8 +91,8 @@ fn get_start(input: &str) -> Option<Coord> {
     None
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
+fn get_part_1_answer(input: &str) -> u64 {
+    let mut part_1_answer: u64 = 0;
 
     let lines: Vec<&str> = input.lines().collect();
 
@@ -100,23 +100,15 @@ fn main() {
         Some(a) => a,
         None => panic!("No start"),
     };
-    println!("Starting point: {:?}", starting_point);
 
     let mut current_location = starting_point;
     let mut back: Direction = Direction::None;
 
-    let mut part_1_answer = 0;
-
     // the number of nodes searched will never be larger than the size of the input
     for i in 0..input.len() {
         let current_symbol = get_symbol(&lines, &current_location);
-        print!(
-            "X: {}, Y: {}, S: {}",
-            current_location.x, current_location.y, current_symbol
-        );
 
         if current_symbol == 'S' && i != 0 {
-            println!("");
             break;
         }
         part_1_answer += 1;
@@ -124,16 +116,13 @@ fn main() {
         let current_dirs = get_tile_connections(&current_symbol);
 
         for dir in current_dirs {
-            print!(" {:?}", dir);
             // skip if visited previously
             if back == dir {
-                print!(" Previous,");
                 continue;
             }
             // skip if out of bounds
             let next_coord = match check_direction(&lines, &current_location, &dir) {
                 None => {
-                    print!(" Out of bounds,");
                     continue;
                 }
                 Some(a) => a,
@@ -153,23 +142,23 @@ fn main() {
             };
             // check if the next current_dirs has a pipe facing in this direction
             if !next_dirs.contains(&required_dir) {
-                print!(" dead end,");
                 continue;
             }
-
-            print!(
-                " Next X: {}, Y: {}, S: {}",
-                next_coord.x, next_coord.y, next_tile
-            );
 
             // sets to opposite of current_direction
             back = required_dir;
             current_location = next_coord;
             break;
         }
-        println!("");
     }
 
-    println!("distance traveled: {}", part_1_answer);
-    println!("part 1 answer: {}", part_1_answer / 2);
+    part_1_answer / 2
+}
+
+fn main() {
+    let input = include_str!("../input.txt");
+
+    let part_1_answer = get_part_1_answer(&input);
+
+    println!("part 1 answer: {}", part_1_answer);
 }
