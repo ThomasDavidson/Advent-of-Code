@@ -91,28 +91,12 @@ fn get_start(input: &str) -> Option<Coord> {
     None
 }
 
-fn get_part_1_answer(input: &str) -> u64 {
-    let mut part_1_answer: u64 = 0;
-
-    let lines: Vec<&str> = input.lines().collect();
-
-    let starting_point = match get_start(input) {
-        Some(a) => a,
-        None => panic!("No start"),
-    };
-
-    let mut current_location = starting_point;
-    let mut back: Direction = Direction::None;
-
-    // the number of nodes searched will never be larger than the size of the input
-    for i in 0..input.len() {
-        let current_symbol = get_symbol(&lines, &current_location);
-
-        if current_symbol == 'S' && i != 0 {
-            break;
-        }
-        part_1_answer += 1;
-
+fn get_next_tile(
+    lines: &Vec<&str>,
+    back: Direction,
+    current_symbol: char,
+    current_location: Coord,
+) -> Option<(Coord, Direction)> {
         let current_dirs = get_tile_connections(&current_symbol);
 
         for dir in current_dirs {
@@ -146,9 +130,40 @@ fn get_part_1_answer(input: &str) -> u64 {
             }
 
             // sets to opposite of current_direction
-            back = required_dir;
-            current_location = next_coord;
+        return Some((next_coord, required_dir));
+    }
+    return None;
+}
+
+fn get_part_1_answer(input: &str) -> u64 {
+    let mut part_1_answer: u64 = 0;
+
+    let lines: Vec<&str> = input.lines().collect();
+
+    let starting_point = match get_start(input) {
+        Some(a) => a,
+        None => panic!("No start"),
+    };
+
+    let mut current_location = starting_point;
+    let mut back: Direction = Direction::None;
+
+    // the number of nodes searched will never be larger than the size of the input
+    for i in 0..input.len() {
+        let current_symbol = get_symbol(&lines, &current_location);
+
+        if current_symbol == 'S' && i != 0 {
             break;
+        }
+        part_1_answer += 1;
+
+        let next_tile_res = get_next_tile(&lines, back, current_symbol, current_location);
+        match next_tile_res {
+            Some(a) => {
+                current_location = a.0;
+                back = a.1;
+            }
+            None => panic!("Hit dead end"),
         }
     }
 
