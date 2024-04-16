@@ -37,6 +37,11 @@ fn expand_space_horizontal(image: Vec<&str>) -> Vec<String> {
     expanded_space
 }
 
+fn expand_space(image: Vec<&str>) -> Vec<String> {
+    let horizontal_expanded_image = expand_space_horizontal(image);
+    expand_space_vertical(horizontal_expanded_image)
+}
+
 #[derive(Debug)]
 struct Coord {
     x: usize,
@@ -50,8 +55,7 @@ fn part_1(input: &str) {
         image.get(0).unwrap().len(),
         image.len()
     );
-    let horizontal_expanded_map = expand_space_horizontal(image);
-    let expanded_map = expand_space_vertical(horizontal_expanded_map);
+    let expanded_map = expand_space(image);
 
     println!(
         "Expanded width: {} height: {}",
