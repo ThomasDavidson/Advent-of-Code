@@ -88,6 +88,37 @@ fn part_1(input: &str) {
     println!("Galaxiers: {}", galaxies.len());
 
     print_distances(&galaxies);
+
+    let mut answer = 0;
+
+    let mut galaxy_iter = galaxies.clone();
+    let mut index: usize = 0;
+    let first_galaxy = galaxies.first().unwrap();
+    for i in 0..galaxies.len() {
+        let galaxy = galaxy_iter.swap_remove(index);
+
+        let distance = if galaxy_iter.len() > 0 {
+            let res = calculate_closest_coord(&galaxy, &galaxy_iter);
+
+            index = res.position;
+
+            res.result
+        } else {
+            galaxy.distance(first_galaxy)
+        };
+        answer += distance;
+
+        println!(
+            "i: {} answer: {} distance: {} galaxy: {:?} remaining: {:?}",
+            i,
+            answer,
+            distance,
+            galaxy,
+            galaxy_iter.len()
+        );
+    }
+
+    println!("Part one asnwer: {}", answer);
 }
 
 fn print_distances(galaxies: &Vec<Coord>) {
@@ -99,7 +130,7 @@ fn print_distances(galaxies: &Vec<Coord>) {
     for coord1 in galaxies {
         print!("{}, {}", coord1.x, coord1.y);
         for coord2 in galaxies {
-            let dist = get_distance(coord1, coord2);
+            let dist = coord1.distance(coord2);
             print!("\t{}", dist);
             if dist == 0 {
                 break;
@@ -109,22 +140,27 @@ fn print_distances(galaxies: &Vec<Coord>) {
     }
 }
 
-fn get_distance(coord1: &Coord, coord2: &Coord) -> usize {
-    let x_diff = coord1.x.abs_diff(coord2.x);
-    let y_diff = coord1.y.abs_diff(coord2.y);
-
-    x_diff + y_diff
+#[derive(Clone, Debug)]
+struct ResultPostion {
+    result: usize,
+    position: usize,
 }
 
-fn calculate_closest_coord(coord: &Coord, coord_list: &Vec<Coord>) -> usize {
-    let res = coord_list
-        .iter()
-        .map(|&a| get_distance(&a, &coord))
-        .enumerate()
-        .min_by_key(|&(_, item)| item)
-        .unwrap();
+fn calculate_closest_coord(coord: &Coord, coord_list: &Vec<Coord>) -> ResultPostion {
+    let mut res: Vec<ResultPostion> = Vec::new();
 
-    res.0
+    for (i, cmp_coord) in coord_list.iter().enumerate() {
+        let dist = coord.distance(cmp_coord);
+        res.push(ResultPostion {
+            position: i,
+            result: dist,
+        });
+    }
+    // println!("res: {:?}", res);
+
+    let min: ResultPostion = res.iter().min_by_key(|&a| a.result).unwrap().clone();
+
+    min
 }
 
 fn main() {
