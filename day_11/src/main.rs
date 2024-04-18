@@ -79,6 +79,26 @@ fn part_1(input: &str) {
 
     println!("Galaxiers: {}", galaxies.len());
 
+    print_distances(&galaxies);
+}
+
+fn print_distances(galaxies: &Vec<Coord>) {
+    for galaxy in galaxies {
+        print!("\t{}, {}", galaxy.x, galaxy.y);
+    }
+    println!("");
+
+    for coord1 in galaxies {
+        print!("{}, {}", coord1.x, coord1.y);
+        for coord2 in galaxies {
+            let dist = get_distance(coord1, coord2);
+            print!("\t{}", dist);
+            if dist == 0 {
+                break;
+            }
+        }
+        println!("");
+    }
 }
 
 fn get_distance(coord1: &Coord, coord2: &Coord) -> usize {
@@ -87,6 +107,7 @@ fn get_distance(coord1: &Coord, coord2: &Coord) -> usize {
 
     x_diff + y_diff
 }
+
 fn calculate_closest_coord(coord: &Coord, coord_list: &Vec<Coord>) -> usize {
     let res = coord_list
         .iter()
@@ -98,26 +119,8 @@ fn calculate_closest_coord(coord: &Coord, coord_list: &Vec<Coord>) -> usize {
     res.0
 }
 
-
 fn main() {
-    let input = include_str!("../input.txt");
+    let input = include_str!("../example.txt");
 
     part_1(input);
-
-
-    let coords = [
-        Coord { x: 4, y: 0 },
-        Coord { x: 9, y: 1 },
-        Coord { x: 0, y: 2 },
-        Coord { y: 6, x: 1 },
-        Coord { y: 11, x: 5 },
-    ]
-    .to_vec();
-
-    let mut coord_list = coords.clone();
-    let mut coord: Coord = coord_list.pop().unwrap();
-
-    let res = calculate_closest_coord(&coord, &coord_list);
-
-    println!("1: {:?} 2: {:?}", coord, coord_list.get(res));
 }
