@@ -42,6 +42,26 @@ fn expand_space(image: Vec<&str>) -> Vec<String> {
     expand_space_vertical(horizontal_expanded_image)
 }
 
+fn print_distances(galaxies: &Vec<Coord>) {
+    for galaxy in galaxies {
+        print!("\t{}, {}", galaxy.x, galaxy.y);
+    }
+    println!("");
+
+    for coord1 in galaxies {
+        print!("{}, {}", coord1.x, coord1.y);
+        for coord2 in galaxies {
+            let dist = coord1.distance(coord2);
+            print!("\t{}", dist);
+            if dist == 0 {
+                break;
+            }
+        }
+        println!("");
+    }
+}
+
+
 #[derive(Debug, Clone, Copy, PartialEq, Ord, PartialOrd, Eq)]
 struct Coord {
     x: usize,
@@ -71,9 +91,6 @@ fn part_1(input: &str) {
         expanded_map.len()
     );
 
-    for line in &expanded_map {
-        println!("{:?}", line);
-    }
 
     let mut galaxies: Vec<Coord> = Vec::new();
 
@@ -87,81 +104,23 @@ fn part_1(input: &str) {
 
     println!("Galaxiers: {}", galaxies.len());
 
-    print_distances(&galaxies);
+    // print_distances(&galaxies);
 
-    let mut answer = 0;
+    let mut answer: usize = 0;
 
-    let mut galaxy_iter = galaxies.clone();
-    let mut index: usize = 0;
-    let first_galaxy = galaxies.first().unwrap();
-    for i in 0..galaxies.len() {
-        let galaxy = galaxy_iter.swap_remove(index);
-
-        let distance = if galaxy_iter.len() > 0 {
-            let res = calculate_closest_coord(&galaxy, &galaxy_iter);
-
-            index = res.position;
-
-            res.result
-        } else {
-            galaxy.distance(first_galaxy)
-        };
-        answer += distance;
-
-        println!(
-            "i: {} answer: {} distance: {} galaxy: {:?} remaining: {:?}",
-            i,
-            answer,
-            distance,
-            galaxy,
-            galaxy_iter.len()
-        );
+    for (i, galaxy1) in galaxies.iter().enumerate(){
+        for (j, galaxy2) in galaxies.iter().enumerate() {
+            if j >= i {
+                break;
+            }
+            answer += galaxy1.distance(galaxy2);
+        }
     }
+
 
     println!("Part one asnwer: {}", answer);
 }
 
-fn print_distances(galaxies: &Vec<Coord>) {
-    for galaxy in galaxies {
-        print!("\t{}, {}", galaxy.x, galaxy.y);
-    }
-    println!("");
-
-    for coord1 in galaxies {
-        print!("{}, {}", coord1.x, coord1.y);
-        for coord2 in galaxies {
-            let dist = coord1.distance(coord2);
-            print!("\t{}", dist);
-            if dist == 0 {
-                break;
-            }
-        }
-        println!("");
-    }
-}
-
-#[derive(Clone, Debug)]
-struct ResultPostion {
-    result: usize,
-    position: usize,
-}
-
-fn calculate_closest_coord(coord: &Coord, coord_list: &Vec<Coord>) -> ResultPostion {
-    let mut res: Vec<ResultPostion> = Vec::new();
-
-    for (i, cmp_coord) in coord_list.iter().enumerate() {
-        let dist = coord.distance(cmp_coord);
-        res.push(ResultPostion {
-            position: i,
-            result: dist,
-        });
-    }
-    // println!("res: {:?}", res);
-
-    let min: ResultPostion = res.iter().min_by_key(|&a| a.result).unwrap().clone();
-
-    min
-}
 
 fn main() {
     let input = include_str!("../example.txt");
