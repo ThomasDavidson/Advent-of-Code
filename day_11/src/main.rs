@@ -47,6 +47,14 @@ struct Coord {
     x: usize,
     y: usize,
 }
+impl Coord {
+    fn distance(&self, coord: &Coord) -> usize {
+        let x_diff = self.x.abs_diff(coord.x);
+        let y_diff = self.y.abs_diff(coord.y);
+
+        x_diff + y_diff
+    }
+}
 
 fn part_1(input: &str) {
     let image: Vec<&str> = input.lines().collect();
