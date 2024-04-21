@@ -1,4 +1,5 @@
 use core::panic;
+use std::time::Instant;
 
 #[derive(Debug, Clone)]
 struct Record {
@@ -137,26 +138,86 @@ fn get_record_variations(record: &Record) -> usize {
     result
 }
 
+fn part_1(records: Vec<Record>) -> usize {
+    let mut part_1_answer = 0;
+
+    for record in records {
+        if record.row.contains("?") {
+            let res = get_record_variations(&record);
+            // println!("Result: {}", res);
+            part_1_answer += res;
+        }
+    }
+
+    part_1_answer
+}
+
+fn unfold_record(record: Record) -> Record {
+    let mut new_row: Vec<char> = Vec::new();
+    let mut new_damged: Vec<usize> = Vec::new();
+
+    for i in 0..5 {
+        let mut append_record: Vec<char> = record.row.chars().collect();
+
+        new_row.append(&mut append_record);
+        // don't add values between
+        if i != 4 {
+            new_row.push('?');
+        }
+
+        new_damged.append(&mut record.damaged.clone());
+    }
+
+    Record {
+        row: new_row.iter().collect(),
+        damaged: new_damged,
+    }
+}
+
+fn part_2(records: Vec<Record>) -> usize {
+    let mut part_2_answer = 0;
+
+    let start = Instant::now();
+    let p2_records = records.iter().map(|record| unfold_record(record.clone()));
+    let duration = start.elapsed();
+    println!("Time elapsed is: {:?}", duration);
+
+    for record in p2_records {
+        println!("Record: {:?}", record);
+
+        let start: Instant = Instant::now();
+
+        let res = get_record_variations(&record);
+        let duration = start.elapsed();
+        println!("Time elapsed is: {:?}", duration);
+        println!("time per result: {:?}", duration / res as u32);
+
+        println!("Result: {}", res);
+        part_2_answer += res;
+        println!("");
+    }
+
+    part_2_answer
+}
+
 fn main() {
-    let input = include_str!("../input.txt");
+    let input = include_str!("../example_damaged.txt");
 
     let records: Vec<Record> = input
         .lines()
         .map(|line| parse_record(line).unwrap())
         .collect();
 
-    let mut part_1_answer = 0;
+    let start: Instant = Instant::now();
 
-    for record in records {
-        if record.row.contains("?") {
-            let res = get_record_variations(&record);
-            println!("Result: {}", res);
-            part_1_answer += res;
-        } else {
-            println!("{:?} valid: {}", record, record.valid());
-        }
-    }
+    let part_1_answer = part_1(records.clone());
+    let duration = start.elapsed();
+    println!("Part 1 time is: {:?}", duration);
+
     println!("Part 1 anwer: {}", part_1_answer);
+
+    let part_2_answer = part_2(records.clone());
+    println!("Part 2 anwer: {}", part_2_answer);
 }
 
 #[cfg(test)]
