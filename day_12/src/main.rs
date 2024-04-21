@@ -202,7 +202,7 @@ fn part_2(records: Vec<Record>) -> usize {
         let res = get_record_variations(&record);
         let duration = start.elapsed();
         print!("Time elapsed is: {:?}", duration);
-        println!(" per result: {:?}", duration / res as u32);
+        println!(" per result: {:?}", duration / (res.max(1) as u32));
 
         println!("Result: {}", res);
         println!("");
