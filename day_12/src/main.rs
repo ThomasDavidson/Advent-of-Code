@@ -220,7 +220,7 @@ fn main() {
     let duration = start.elapsed();
     println!("Part 1 time is: {:?}", duration);
 
-    println!("Part 1 anwer: {}", part_1_answer);
+    println!("Part 1 answer: {}", part_1_answer);
 
     let part_2_answer = part_2(records.clone());
     println!("Part 2 anwer: {}", part_2_answer);
