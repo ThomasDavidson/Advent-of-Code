@@ -207,27 +207,10 @@ fn unfold_record(record: Record) -> Record {
 fn part_2(records: Vec<Record>) -> usize {
     let mut part_2_answer = 0;
 
-    let start = Instant::now();
     let p2_records = records.iter().map(|record| unfold_record(record.clone()));
-    let duration = start.elapsed();
-    println!("Time elapsed is: {:?}", duration);
 
     for record in p2_records {
-        println!(
-            "Record: {:?} {:?}",
-            record.row.iter().collect::<String>(),
-            record.damaged
-        );
-
-        let start: Instant = Instant::now();
-
         let res = get_record_variations(&record);
-        let duration = start.elapsed();
-        print!("Time elapsed is: {:?}", duration);
-        println!(" per result: {:?}", duration / (res.max(1) as u32));
-
-        println!("Result: {}", res);
-        println!("");
         part_2_answer += res;
     }
 
