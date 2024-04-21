@@ -67,6 +67,12 @@ impl Record {
             }
         }
 
+        let remaining = cmp_rec.iter().fold(0, |acc, e| acc + e);
+
+        if self.row.len() < (length + remaining) {
+            return false
+        }
+
         true
     }
 
