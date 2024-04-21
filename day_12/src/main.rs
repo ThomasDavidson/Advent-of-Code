@@ -1,7 +1,7 @@
 use core::panic;
-use std::time::Instant;
+use std::{collections::HashMap, time::Instant};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 struct Record {
     row: Vec<char>,
     damaged: Vec<usize>,
@@ -123,7 +123,7 @@ fn parse_record(input: &str) -> Option<Record> {
     })
 }
 
-fn get_record_variations(record: &Record) -> usize {
+fn memoized_get_record_variations(record: &Record, cache: &mut HashMap<Record, usize>) -> usize {
     let mut result = 0;
 
     if !record.is_damged() {
@@ -132,6 +132,11 @@ fn get_record_variations(record: &Record) -> usize {
             false => return 0,
         }
     }
+
+    match cache.get(record) {
+        Some(a) => return *a,
+        None => (),
+    };
 
     let mut mut_row: Vec<char> = record.row.to_owned();
 
@@ -149,7 +154,7 @@ fn get_record_variations(record: &Record) -> usize {
     };
 
     result += match new_record.partial_compare(i + 1) {
-        Some(a) => get_record_variations(&a),
+        Some(a) => memoized_get_record_variations(&a, cache),
         None => 0,
     };
 
@@ -161,9 +166,10 @@ fn get_record_variations(record: &Record) -> usize {
     };
 
     result += match new_record.partial_compare(i + 1) {
-        Some(a) => get_record_variations(&a),
+        Some(a) => memoized_get_record_variations(&a, cache),
         None => 0,
     };
+    cache.insert(record.clone(), result);
 
     result
 }
@@ -174,7 +180,6 @@ fn part_1(records: Vec<Record>) -> usize {
     for record in records {
         if record.is_damged() {
             let res = get_record_variations(&record);
-            // println!("Result: {}", res);
             part_1_answer += res;
         }
     }
@@ -204,6 +209,13 @@ fn unfold_record(record: Record) -> Record {
     }
 }
 
+fn get_record_variations(record: &Record) -> usize {
+    let mut cache: HashMap<Record, usize> = HashMap::new();
+
+    let res = memoized_get_record_variations(record, &mut cache);
+    res
+}
+
 fn part_2(records: Vec<Record>) -> usize {
     let mut part_2_answer = 0;
 
@@ -218,7 +230,7 @@ fn part_2(records: Vec<Record>) -> usize {
 }
 
 fn main() {
-    let input = include_str!("../example_damaged.txt");
+    let input = include_str!("../input.txt");
 
     let records: Vec<Record> = input
         .lines()
@@ -233,8 +245,10 @@ fn main() {
 
     println!("Part 1 answer: {}", part_1_answer);
 
+    let start: Instant = Instant::now();
     let part_2_answer = part_2(records.clone());
-    println!("Part 2 anwer: {}", part_2_answer);
+    let duration = start.elapsed();
+    println!("Part 2 anwer: {}, time: {:?}", part_2_answer, duration);
 }
 
 #[cfg(test)]
@@ -275,7 +289,7 @@ mod tests {
 
             for i in 1..record.row.len() {
                 let res = record.partial_compare(i);
-                assert_eq!(res, true, "record {:?} iter: {}", record, i);
+                assert!(res.is_some(), "record {:?} iter: {}", record, i);
             }
         }
     }
