@@ -67,6 +67,7 @@ impl Record {
             }
         }
 
+        // check if there is enough room for the rest of the damaged areas
         let remaining = cmp_rec.iter().fold(0, |acc, e| acc + e + 1);
 
         if self.row.len() < (length + remaining) {
