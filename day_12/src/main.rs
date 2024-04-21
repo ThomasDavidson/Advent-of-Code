@@ -22,7 +22,7 @@ impl Record {
 
         found_damaged_areas == self.damaged
     }
-    fn partial_compare(&self, length: usize) -> bool {
+    fn partial_compare(&self, length: usize) -> Option<Record> {
         let limit = if self.row.len() < length {
             self.row.len()
         } else {
@@ -40,11 +40,11 @@ impl Record {
                     _ => {
                         let cmp_damaged = match cmp_rec.pop() {
                             Some(a) => a,
-                            None => return false,
+                            None => return None,
                         };
 
                         if count != cmp_damaged {
-                            return false;
+                            return None;
                         }
 
                         count = 0;
@@ -57,23 +57,45 @@ impl Record {
 
         if count != 0 {
             // last match is doesn't account for the next characters
-            let last_cmp = match cmp_rec.pop() {
+            let last_cmp = match cmp_rec.last() {
                 Some(a) => a,
-                None => return false,
+                None => return None,
             };
 
-            if count > last_cmp {
-                return false;
+            if count > *last_cmp {
+                return None;
             }
         }
 
         let remaining = cmp_rec.iter().fold(0, |acc, e| acc + e + 1);
 
         if self.row.len() < (length + remaining) {
-            return false;
+            return None;
         }
 
-        true
+        let first_dot_before_check = self
+            .row
+            .iter()
+            .take(limit)
+            .enumerate()
+            .rev()
+            .find(|(_, &a)| a == '.');
+
+        // return the same if it cannot find a dot
+        let index = match first_dot_before_check {
+            None | Some((0, _)) => return Some(self.clone()),
+            Some(a) => a.0,
+        };
+
+        let row_removed: Vec<char> = self.row.clone().drain(index..).collect();
+
+        // unreverse to use
+        cmp_rec.reverse();
+
+        Some(Record {
+            damaged: cmp_rec,
+            row: row_removed,
+        })
     }
 
     fn is_damged(&self) -> bool {
@@ -132,9 +154,10 @@ fn get_record_variations(record: &Record) -> usize {
         row: mut_row.to_owned(),
     };
 
-    if new_record.partial_compare(i + 1) {
-        result += get_record_variations(&new_record);
-    }
+    result += match new_record.partial_compare(i + 1) {
+        Some(a) => get_record_variations(&a),
+        None => 0,
+    };
 
     mut_row[i] = '#';
 
@@ -143,9 +166,10 @@ fn get_record_variations(record: &Record) -> usize {
         row: mut_row,
     };
 
-    if new_record.partial_compare(i + 1) {
-        result += get_record_variations(&new_record);
-    }
+    result += match new_record.partial_compare(i + 1) {
+        Some(a) => get_record_variations(&a),
+        None => 0,
+    };
 
     result
 }
