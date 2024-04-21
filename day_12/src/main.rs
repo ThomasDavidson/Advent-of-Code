@@ -3,16 +3,18 @@ use std::time::Instant;
 
 #[derive(Debug, Clone)]
 struct Record {
-    row: String,
+    row: Vec<char>,
     damaged: Vec<usize>,
 }
 impl Record {
     fn valid(&self) -> bool {
-        if self.row.contains('?') {
+        if self.is_damged() {
             return false;
         }
         let found_damaged_areas: Vec<usize> = self
             .row
+            .iter()
+            .collect::<String>()
             .split('.')
             .map(|a| a.len())
             .filter(|&a| a != 0)
@@ -31,7 +33,7 @@ impl Record {
         let mut cmp_rec: Vec<usize> = self.damaged.clone();
         cmp_rec.reverse();
 
-        for c in self.row.chars().take(limit) {
+        for c in self.row.iter().take(limit) {
             match c {
                 '.' => match count {
                     0 => continue,
@@ -67,6 +69,10 @@ impl Record {
 
         true
     }
+
+    fn is_damged(&self) -> bool {
+        self.row.iter().any(|&a| a == '?')
+    }
 }
 
 fn parse_record(input: &str) -> Option<Record> {
@@ -90,7 +96,7 @@ fn parse_record(input: &str) -> Option<Record> {
         .collect();
 
     Some(Record {
-        row: split_input.0.to_string(),
+        row: split_input.0.chars().collect(),
         damaged: damaged,
     })
 }
@@ -98,14 +104,14 @@ fn parse_record(input: &str) -> Option<Record> {
 fn get_record_variations(record: &Record) -> usize {
     let mut result = 0;
 
-    if !record.row.contains('?') {
+    if !record.is_damged() {
         match record.valid() {
             true => return 1,
             false => return 0,
         }
     }
 
-    let mut mut_row: Vec<char> = record.row.chars().collect();
+    let mut mut_row: Vec<char> = record.row.to_owned();
 
     let f = mut_row.iter().enumerate().find(|(_, a)| **a == '?');
     let i = match f {
@@ -117,7 +123,7 @@ fn get_record_variations(record: &Record) -> usize {
 
     let new_record = Record {
         damaged: record.damaged.to_owned(),
-        row: mut_row.iter().collect(),
+        row: mut_row.to_owned(),
     };
 
     if new_record.partial_compare(i + 1) {
@@ -128,7 +134,7 @@ fn get_record_variations(record: &Record) -> usize {
 
     let new_record = Record {
         damaged: record.damaged.to_owned(),
-        row: mut_row.iter().collect(),
+        row: mut_row,
     };
 
     if new_record.partial_compare(i + 1) {
@@ -142,7 +148,7 @@ fn part_1(records: Vec<Record>) -> usize {
     let mut part_1_answer = 0;
 
     for record in records {
-        if record.row.contains("?") {
+        if record.is_damged() {
             let res = get_record_variations(&record);
             // println!("Result: {}", res);
             part_1_answer += res;
@@ -157,7 +163,7 @@ fn unfold_record(record: Record) -> Record {
     let mut new_damged: Vec<usize> = Vec::new();
 
     for i in 0..5 {
-        let mut append_record: Vec<char> = record.row.chars().collect();
+        let mut append_record: Vec<char> = record.row.to_owned();
 
         new_row.append(&mut append_record);
         // don't add values between
@@ -169,7 +175,7 @@ fn unfold_record(record: Record) -> Record {
     }
 
     Record {
-        row: new_row.iter().collect(),
+        row: new_row,
         damaged: new_damged,
     }
 }
@@ -189,12 +195,12 @@ fn part_2(records: Vec<Record>) -> usize {
 
         let res = get_record_variations(&record);
         let duration = start.elapsed();
-        println!("Time elapsed is: {:?}", duration);
-        println!("time per result: {:?}", duration / res as u32);
+        print!("Time elapsed is: {:?}", duration);
+        println!(" per result: {:?}", duration / res as u32);
 
         println!("Result: {}", res);
-        part_2_answer += res;
         println!("");
+        part_2_answer += res;
     }
 
     part_2_answer
