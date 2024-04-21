@@ -195,7 +195,11 @@ fn part_2(records: Vec<Record>) -> usize {
     println!("Time elapsed is: {:?}", duration);
 
     for record in p2_records {
-        println!("Record: {:?} {:?}", record.row.iter().collect::<String>(), record.damaged);
+        println!(
+            "Record: {:?} {:?}",
+            record.row.iter().collect::<String>(),
+            record.damaged
+        );
 
         let start: Instant = Instant::now();
 
