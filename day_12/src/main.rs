@@ -234,11 +234,11 @@ mod tests {
     fn test_variations() {
         let record = Record {
             damaged: vec![3, 2, 1],
-            row: "?###????????".to_string(),
+            row: "?###????????".chars().collect(),
         };
         let res = get_record_variations(&record);
 
-        assert_eq!(res, 7);
+        assert_eq!(res, 10);
     }
 
     #[test]
@@ -246,15 +246,15 @@ mod tests {
         let records: Vec<Record> = vec![
             Record {
                 damaged: vec![3, 2, 1],
-                row: ".###.##.#...".to_string(),
+                row: ".###.##.#...".chars().collect(),
             },
             Record {
                 damaged: vec![3, 2, 1],
-                row: ".###.##..#..".to_string(),
+                row: ".###.##..#..".chars().collect(),
             },
             Record {
                 damaged: vec![3, 2, 1],
-                row: ".###..##.#..".to_string(),
+                row: ".###..##.#..".chars().collect(),
             },
         ];
 
