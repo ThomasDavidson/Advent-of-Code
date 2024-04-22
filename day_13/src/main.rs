@@ -33,16 +33,29 @@ fn parse_input(input: &str) -> Vec<Valley> {
     valleys
 }
 
-fn find_reflection(valley: &Valley) -> Option<usize> {
+fn row_diff(row_1: &Vec<char>, row_2: &Vec<char>) -> usize {
+    row_1
+        .iter()
+        .zip(row_2.iter())
+        .fold(0, |acc: usize, (char_1, char_2)| {
+            acc + if char_1 == char_2 { 0 } else { 1 }
+        })
+}
+
+fn find_reflection(valley: &Valley, smudges: usize) -> Option<usize> {
     let mut last: Vec<char> = Vec::new();
 
     let mut mirrors: Vec<usize> = Vec::new();
 
     for (i, row) in valley.land.iter().enumerate() {
-        if row == &last {
-            mirrors.push(i);
+        // skip first comparison if empty
+        if !last.is_empty() {
+            let diff = row_diff(row, &last);
+            if diff == 0 || diff == smudges {
+                mirrors.push(i);
+            }
         }
-        // println!("{:?}", row.iter().collect::<String>());
+
         last = row.clone();
     }
 
@@ -51,7 +64,7 @@ fn find_reflection(valley: &Valley) -> Option<usize> {
     }
 
     for mirror in mirrors {
-        let mut res = true;
+        let mut total_smudes = 0;
 
         let iter = 0..mirror;
         for (i, j) in iter.rev().zip(mirror..(mirror * 2)) {
@@ -59,18 +72,18 @@ fn find_reflection(valley: &Valley) -> Option<usize> {
                 None => break,
                 Some(a) => a,
             };
-    
+
             let cmp_row_2 = match valley.land.get(j) {
                 None => break,
                 Some(a) => a,
             };
-            if cmp_row_1 != cmp_row_2 {
-                res = false;
-                break;
-            }
+
+            let diff = row_diff(cmp_row_1, cmp_row_2);
+
+            total_smudes += diff;
         }
 
-        if res {
+        if total_smudes == smudges {
             return Some(mirror);
         }
     }
@@ -80,9 +93,24 @@ fn find_reflection(valley: &Valley) -> Option<usize> {
 fn part_1(valleys: Vec<Valley>) -> usize {
     let mut answer = 0;
     for (i, valley) in valleys.iter().enumerate() {
-        let res = match find_reflection(&valley) {
+        let res = match find_reflection(&valley, 0) {
             Some(a) => a * 100,
-            None => match find_reflection(&valley.rotate()) {
+            None => match find_reflection(&valley.rotate(), 0) {
+                Some(a) => a,
+                None => panic!("No perfect mirror {}", i),
+            },
+        };
+        answer += res;
+    }
+    answer
+}
+
+fn part_2(valleys: Vec<Valley>) -> usize {
+    let mut answer = 0;
+    for (i, valley) in valleys.iter().enumerate() {
+        let res = match find_reflection(&valley, 1) {
+            Some(a) => a * 100,
+            None => match find_reflection(&valley.rotate(), 1) {
                 Some(a) => a,
                 None => panic!("No perfect mirror {}", i),
             },
@@ -96,8 +124,11 @@ fn main() {
 
     let valleys: Vec<Valley> = parse_input(input);
 
-    let part_1_answer = part_1(valleys);
+    let part_1_answer = part_1(valleys.clone());
     println!("part 1 answer: {}", part_1_answer);
+
+    let part_2_answer = part_2(valleys.clone());
+    println!("part 2 answer: {}", part_2_answer);
 }
 
 #[cfg(test)]
