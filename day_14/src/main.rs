@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, ops::Rem, time::Instant};
 
 fn calculate_weight(lines: &Vec<Vec<char>>) -> usize {
     let res = lines
@@ -10,31 +10,45 @@ fn calculate_weight(lines: &Vec<Vec<char>>) -> usize {
     res.fold(0, |acc, i| acc + i)
 }
 
+#[derive(Debug)]
 enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
+    North,
+    South,
+    West,
+    East,
 }
-fn rotate(lines: Vec<Vec<char>>) -> Vec<Vec<char>> {
-    let width = 0..lines.first().unwrap().len();
 
-    width
-        .map(|x| {
-            lines
-                .iter()
-                .map(|row| row.iter().nth(x).unwrap().clone())
-                .collect::<Vec<char>>()
+fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>> {
+    assert!(!v.is_empty());
+    let len = v[0].len();
+    let mut iters: Vec<_> = v.into_iter().map(|n| n.into_iter()).collect();
+    (0..len)
+        .map(|_| {
+            iters
+                .iter_mut()
+                .map(|n| n.next().unwrap())
+                .collect::<Vec<T>>()
         })
         .collect()
 }
 
-fn roll_rocks(lines: Vec<Vec<char>>) -> Vec<Vec<char>> {
-    println!("w: {} h: {}", lines.first().unwrap().len(), lines.len());
+fn flip(lines: Vec<Vec<char>>) -> Vec<Vec<char>> {
+    lines
+        .iter()
+        .map(|line| line.clone().into_iter().rev().collect())
+        .collect()
+}
+
+fn roll_rocks(lines: Vec<Vec<char>>, direction: Direction) -> Vec<Vec<char>> {
     let mut res: Vec<Vec<char>> = Vec::new();
     // rotate to make it easier to move the rocks
-    let rotated = rotate(lines);
-    println!("w: {} h: {}", rotated.first().unwrap().len(), rotated.len());
+
+    let rotated = match direction {
+        Direction::North => transpose(lines),
+        Direction::West => lines,
+        Direction::South => flip(transpose(lines)),
+        Direction::East => flip(lines),
+    };
 
     for mut line in rotated {
         let mut empty_positions: VecDeque<usize> = VecDeque::new();
@@ -59,7 +73,12 @@ fn roll_rocks(lines: Vec<Vec<char>>) -> Vec<Vec<char>> {
         res.push(line);
     }
 
-    rotate(res)
+    match direction {
+        Direction::North => transpose(res),
+        Direction::West => res,
+        Direction::South => transpose(flip(res)),
+        Direction::East => flip(res),
+    }
 }
 
 fn string_to_char_vec_vec(input: &str) -> Vec<Vec<char>> {
@@ -68,36 +87,92 @@ fn string_to_char_vec_vec(input: &str) -> Vec<Vec<char>> {
 
 fn part_1(input: &str) -> usize {
     let formated_input: Vec<Vec<char>> = string_to_char_vec_vec(input);
-    let rolled = roll_rocks(formated_input.clone());
+    let rolled = roll_rocks(formated_input.clone(), Direction::North);
 
-    for i in &rolled {
-        println!("{}", i.iter().collect::<String>());
-    }
     calculate_weight(&rolled)
+}
+
+fn part_2(input: &str) -> usize {
+    let formated_input: Vec<Vec<char>> = string_to_char_vec_vec(input);
+
+    let mut records: Vec<(usize, Vec<Vec<char>>)> = Vec::new();
+    let mut rolled = formated_input.clone();
+
+    let mut cleared = false;
+
+    let iterations = 1000000000;
+    for i in 0..iterations {
+        for direction in [
+            Direction::North,
+            Direction::West,
+            Direction::South,
+            Direction::East,
+        ] {
+            rolled = roll_rocks(rolled, direction);
+        }
+
+        // try to find patterns in each cycle
+        match records.iter().find(|(_, a)| *a == rolled) {
+            Some(_) => {
+                if cleared {
+                    break;
+                } else {
+                    // remove records from before pattern settled
+                    records.clear();
+                    cleared = true;
+                }
+            }
+            None => records.push((i + 1, rolled.clone())),
+        }
+    }
+
+    // calculate which repeating pattern will occur for the billionth cycle
+    let remaining_cycles = iterations - records.iter().map(|a| a.0).min().unwrap();
+
+    let remainder = remaining_cycles.rem(records.iter().len());
+
+    let final_rotation = &records.iter().nth(remainder).unwrap().1;
+
+    calculate_weight(final_rotation)
 }
 
 fn main() {
     let input = include_str!("../input.txt");
-
+    
+    let start: Instant = Instant::now();
     let part_1_answer = part_1(input);
-    println!("part 1 answer: {}", part_1_answer);
+    let duration = start.elapsed();
+    println!("Part 1 anwer: {}, time: {:?}", part_1_answer, duration);
+
+    let start: Instant = Instant::now();
+    let part_2_answer = part_2(input);
+    let duration = start.elapsed();
+    println!("Part 2 anwer: {}, time: {:?}", part_2_answer, duration);
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{calculate_weight, rotate, string_to_char_vec_vec};
+    use crate::{calculate_weight, roll_rocks, string_to_char_vec_vec, Direction};
 
     #[test]
     fn test_weight_calc() {
-        let input = string_to_char_vec_vec(include_str!("../example_rolled.txt"));
+        let input = string_to_char_vec_vec(include_str!("../example_rolled_north.txt"));
 
         assert_eq!(136, calculate_weight(&input));
     }
     #[test]
-    fn test_rolling() {
-        let input = string_to_char_vec_vec(include_str!("../example_rolled.txt"));
-        let result = string_to_char_vec_vec(include_str!("../example_rolled.txt"));
+    fn test_rolling_north() {
+        let input = string_to_char_vec_vec(include_str!("../example.txt"));
+        let expected = string_to_char_vec_vec(include_str!("../example_rolled_north.txt"));
 
-        assert_eq!(result, rotate(input));
+        assert_eq!(expected, roll_rocks(input, Direction::North));
+    }
+    #[test]
+    fn test_rolling_south() {
+        let input = string_to_char_vec_vec(include_str!("../example.txt"));
+        let expected = string_to_char_vec_vec(include_str!("../example_rolled_south.txt"));
+
+        let result = roll_rocks(input, Direction::South);
+        assert_eq!(expected, result);
     }
 }
