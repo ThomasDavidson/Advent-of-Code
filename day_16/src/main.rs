@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum Direction {
     North,
@@ -99,34 +101,20 @@ fn beam_move(contraction: &Vec<Vec<char>>, state: BeamState) -> Vec<BeamState> {
         .collect()
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
-
-    let contraction: Vec<Vec<char>> = input.lines().map(|line| line.chars().collect()).collect();
-
-    // for line in &contraction {
-    //     println!("{}", line.iter().collect::<String>());
-    // }
-
+fn get_energized_count(contraction: Vec<Vec<char>>, initial: BeamState) -> usize {
     // North, East, South, West
     let mut visited: Vec<Vec<[bool; 4]>> = contraction
         .iter()
         .map(|a| a.iter().map(|_| [false; 4]).collect())
         .collect();
 
-    let mut states = vec![BeamState {
-        direction: Direction::East,
-        x: 0,
-        y: 0,
-    }];
+    let mut states = vec![initial];
     visited[0][0][Direction::East as usize] = true;
 
     while !states.is_empty() {
-        // println!("State {:?}", states);
         let new_states = states
             .into_iter()
             .map(|state| beam_move(&contraction, state));
-        // println!("{:?}", new_states);
 
         states = new_states
             .flat_map(|a| a)
@@ -138,22 +126,30 @@ fn main() {
         }
     }
 
-    // println!("");
-
-    // for line in &visited {
-    //     for tile in line {
-    //         match tile.iter().any(|&a| a) {
-    //             true => print!("#"),
-    //             false => print!("."),
-    //         }
-    //     }
-    //     println!("");
-    // }
-
-    let part_1_answer = visited
+    visited
         .into_iter()
         .flatten()
         .map(|tile| tile.iter().any(|&a| a))
-        .fold(0, |acc, b| acc + if b { 1 } else { 0 });
-    println!("part 1 answer: {}", part_1_answer);
+        .fold(0, |acc, b| acc + if b { 1 } else { 0 })
+}
+
+fn part_1(contraction: Vec<Vec<char>>) -> usize {
+    let initial = BeamState {
+        direction: Direction::East,
+        x: 0,
+        y: 0,
+    };
+
+    get_energized_count(contraction, initial)
+}
+
+fn main() {
+    let input = include_str!("../input.txt");
+
+    let contraction: Vec<Vec<char>> = input.lines().map(|line| line.chars().collect()).collect();
+
+    let start: Instant = Instant::now();
+    let part_1_answer = part_1(contraction);
+    let duration = start.elapsed();
+    println!("Part 1 anwer: {}, time: {:?}", part_1_answer, duration);
 }
