@@ -101,15 +101,15 @@ fn beam_move(contraction: &Vec<Vec<char>>, state: BeamState) -> Vec<BeamState> {
         .collect()
 }
 
-fn get_energized_count(contraction: Vec<Vec<char>>, initial: BeamState) -> usize {
+fn get_energized_count(contraction: &Vec<Vec<char>>, initial: &BeamState) -> usize {
     // North, East, South, West
     let mut visited: Vec<Vec<[bool; 4]>> = contraction
         .iter()
         .map(|a| a.iter().map(|_| [false; 4]).collect())
         .collect();
 
-    let mut states = vec![initial];
-    visited[0][0][Direction::East as usize] = true;
+    let mut states = vec![initial.clone()];
+    visited[initial.y][initial.x][Direction::East as usize] = true;
 
     while !states.is_empty() {
         let new_states = states
@@ -133,14 +133,64 @@ fn get_energized_count(contraction: Vec<Vec<char>>, initial: BeamState) -> usize
         .fold(0, |acc, b| acc + if b { 1 } else { 0 })
 }
 
-fn part_1(contraction: Vec<Vec<char>>) -> usize {
+fn part_1(contraction: &Vec<Vec<char>>) -> usize {
     let initial = BeamState {
         direction: Direction::East,
         x: 0,
         y: 0,
     };
 
-    get_energized_count(contraction, initial)
+    get_energized_count(contraction, &initial)
+}
+
+fn part_2(contraction: &Vec<Vec<char>>) -> usize {
+    let width = (contraction[0].len() - 1) as usize;
+    let height = (contraction.len() - 1) as usize;
+
+    let north_initial: Vec<BeamState> = (0..width)
+        .map(|i| BeamState {
+            x: i,
+            y: 0,
+            direction: Direction::South,
+        })
+        .collect();
+
+    let west_initial: Vec<BeamState> = (0..width)
+        .map(|i| BeamState {
+            x: 0,
+            y: i,
+            direction: Direction::South,
+        })
+        .collect();
+    let east_initial: Vec<BeamState> = (0..width)
+        .map(|i| BeamState {
+            x: i,
+            y: width,
+            direction: Direction::South,
+        })
+        .collect();
+
+    let south_initial: Vec<BeamState> = (0..width)
+        .map(|i| BeamState {
+            x: i,
+            y: height,
+            direction: Direction::South,
+        })
+        .collect();
+
+    let inital_states: Vec<BeamState> = vec![
+        north_initial,
+        west_initial,
+        east_initial,
+        south_initial,
+    ].into_iter().flatten().collect();
+
+
+    inital_states
+        .iter()
+        .map(|initial| get_energized_count(contraction, initial))
+        .max()
+        .unwrap()
 }
 
 fn main() {
@@ -149,7 +199,12 @@ fn main() {
     let contraction: Vec<Vec<char>> = input.lines().map(|line| line.chars().collect()).collect();
 
     let start: Instant = Instant::now();
-    let part_1_answer = part_1(contraction);
+    let part_1_answer = part_1(&contraction);
     let duration = start.elapsed();
     println!("Part 1 anwer: {}, time: {:?}", part_1_answer, duration);
+
+    let start: Instant = Instant::now();
+    let part_2_answer = part_2(&contraction);
+    let duration = start.elapsed();
+    println!("Part 2 anwer: {}, time: {:?}", part_2_answer, duration);
 }
