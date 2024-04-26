@@ -41,24 +41,24 @@ fn crucible_move(grid: &Vec<Vec<usize>>, state: CrucibleState) -> Vec<CrucibleSt
             ..state
         })
         // filter out direction if it results in a strait line for over 3 in a row
-        .filter(|state| state.run <= 3)
+        .filter(|new_state| new_state.run < 3)
         //  check if the result is in bounds
-        .filter(|state| state.grid.check_bounds(width, height))
-        .map(|state| {
-            let (x, y) = state.grid.direction.get_translation();
+        .filter(|new_state| new_state.grid.check_bounds(width, height))
+        .map(|new_state| {
+            let (x, y) = new_state.grid.direction.get_translation();
             CrucibleState {
                 grid: GridState {
-                    x: (state.grid.x as i16 + x) as usize,
+                    x: (new_state.grid.x as i16 + x) as usize,
                     y: (state.grid.y as i16 + y) as usize,
-                    ..state.grid
+                    ..new_state.grid
                 },
-                ..state
+                ..new_state
             }
         })
         // Caclulate weight
-        .map(|state| CrucibleState {
-            weight: state.weight + grid[state.grid.y][state.grid.x],
-            ..state
+        .map(|new_state| CrucibleState {
+            weight: new_state.weight + grid[new_state.grid.y][new_state.grid.x],
+            ..new_state
         })
         .collect()
 }
