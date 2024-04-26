@@ -63,6 +63,49 @@ fn crucible_move(grid: &Vec<Vec<usize>>, state: CrucibleState) -> Vec<CrucibleSt
         .collect()
 }
 
+struct VisitState {
+    direction: Direction,
+    weight: usize,
+    run: usize,
+}
+struct Visited {
+    grid: Vec<Vec<Vec<VisitState>>>,
+}
+impl Visited {
+    fn get_weight(&self, state: CrucibleState) -> usize {
+        let visit_state = &self.grid[state.grid.y][state.grid.x];
+        let res = visit_state
+            .iter()
+            .find(|&visit| (visit.direction == state.grid.direction) && (visit.run == state.run));
+
+        match res {
+            Some(a) => a.weight,
+            None => usize::MAX,
+        }
+    }
+    fn set_weight(&mut self, state: CrucibleState) {
+        let visit_state = &mut self.grid[state.grid.y][state.grid.x];
+
+        let visit_find = visit_state
+            .iter_mut()
+            .find(|visit| (visit.direction == state.grid.direction) && (visit.run == state.run));
+
+        if visit_find.is_some() {
+            let visit = visit_find.unwrap();
+            *visit = VisitState {
+                direction: state.grid.direction,
+                weight: state.weight,
+                run: state.run,
+            };
+        } else {
+            visit_state.push(VisitState {
+                direction: state.grid.direction,
+                weight: state.weight,
+                run: state.run,
+            });
+        }
+    }
+}
 
 fn get_lowest_heat_loss(grid: &Vec<Vec<usize>>, initial: &CrucibleState) -> usize {
     // bounds check
@@ -75,50 +118,46 @@ fn get_lowest_heat_loss(grid: &Vec<Vec<usize>>, initial: &CrucibleState) -> usiz
     }];
     println!("Initital: {:?}", states);
 
-    let mut visited: Vec<Vec<[(bool, usize); 4]>> = grid
-        .iter()
-        .map(|a| a.iter().map(|_| [(false, usize::MAX); 4]).collect())
-        .collect();
-
-
-    // visited[initial.grid.y][initial.grid.x][Direction::East as usize].0 = true;
-    
-
-
+    let mut visited = Visited {
+        grid: grid
+            .iter()
+            .map(|a| a.iter().map(|_| Vec::new()).collect())
+            .collect(),
+    };
 
     // only check the lowest for each iteration
     while !states.is_empty() {
-        // println!("Before Sort {:?}", states);
         states.sort_by(|a, b| b.weight.partial_cmp(&a.weight).unwrap());
+        // println!("States {:?}", states);
 
         let state = states.pop().unwrap();
-        visited[state.grid.y][state.grid.x][state.grid.direction as usize].0 = true;
-        visited[state.grid.y][state.grid.x][state.grid.direction as usize].1 = state.weight;
+        visited.set_weight(state);
 
-        let new_states = crucible_move(grid, state.clone());
+        let new_states = crucible_move(grid, state);
+        // println!("New States {:?}", new_states);
+
 
         for s in new_states {
-            let tile_weight = visited[s.grid.y][s.grid.x][s.grid.direction as usize].1;
-            if tile_weight > s.weight {
+            if visited.get_weight(s) > s.weight {
                 states.push(s);
             }
         }
     }
-    for (y, line) in visited.iter().enumerate() {
+
+    for (y, line) in visited.grid.iter().enumerate() {
         for (x, _) in line.iter().enumerate() {
-            let weight = visited[y][x];
-            for (i, &(_, c_weight)) in weight.iter().enumerate() {
-                match i {
-                    0 => print!("N"),
-                    1 => print!("E"),
-                    2 => print!("S"),
-                    3 => print!("W"),
-                    _ => panic!(""),
+            let weight = &visited.grid[y][x];
+            for v_state in weight.iter() {
+                match v_state.direction {
+                    Direction::North => print!("N"),
+                    Direction::East => print!("E"),
+                    Direction::South => print!("S"),
+                    Direction::West => print!("W"),
                 }
-                if c_weight == usize::MAX {
+                if v_state.weight == usize::MAX {
                     print!(".");
                 } else {
-                    print!("{c_weight} ");
+                    print!("{} ", v_state.weight);
                 }
             }
 
@@ -126,17 +165,17 @@ fn get_lowest_heat_loss(grid: &Vec<Vec<usize>>, initial: &CrucibleState) -> usiz
         }
         println!("");
     }
-    println!("Sort {:?}", states);
 
     visited
+        .grid
         .last()
         .unwrap()
         .last()
         .unwrap()
         .iter()
-        .min_by(|&&a, &&b| a.1.partial_cmp(&b.1).unwrap())
+        .min_by(|a, b| a.weight.partial_cmp(&b.weight).unwrap())
         .unwrap()
-        .1
+        .weight
 }
 
 fn main() {
