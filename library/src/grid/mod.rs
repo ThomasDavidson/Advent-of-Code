@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Direction {
+    None,
     North,
     East,
     South,
@@ -12,6 +13,7 @@ impl Direction {
             Direction::East => (1, 0),
             Direction::South => (0, 1),
             Direction::West => (-1, 0),
+            Direction::None => (0, 0),
         }
     }
     pub fn inverse(self) -> Self {
@@ -20,6 +22,7 @@ impl Direction {
             Direction::East => Direction::West,
             Direction::South => Direction::North,
             Direction::West => Direction::East,
+            Direction::None => Direction::None,
         }
     }
 }
@@ -61,6 +64,7 @@ impl GridState {
                     true
                 }
             }
+            Direction::None => true,
         }
     }
 }

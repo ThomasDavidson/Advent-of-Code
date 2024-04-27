@@ -134,6 +134,7 @@ impl Visited {
                             Direction::East => print!("E"),
                             Direction::South => print!("S"),
                             Direction::West => print!("W"),
+                            Direction::None => print!("N"),
                         }
                         if v_state.weight == usize::MAX {
                             print!(".");
@@ -220,7 +221,7 @@ fn main() {
 
     let initial = CrucibleState {
         grid: GridState {
-            direction: Direction::East,
+            direction: Direction::None,
             x: 0,
             y: 0,
         },
