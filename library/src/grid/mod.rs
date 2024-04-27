@@ -14,9 +14,17 @@ impl Direction {
             Direction::West => (-1, 0),
         }
     }
+    pub fn inverse(self) -> Self {
+        match self {
+            Direction::North => Direction::South,
+            Direction::East => Direction::West,
+            Direction::South => Direction::North,
+            Direction::West => Direction::East,
+        }
+    }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GridState {
     pub direction: Direction,
     pub x: usize,
