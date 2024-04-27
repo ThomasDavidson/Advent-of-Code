@@ -238,3 +238,24 @@ fn main() {
     let duration = start.elapsed();
     println!("Part 1 anwer: {part_1_answer}, time: {:?}", duration);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn check_example_1() {
+        let input = include_str!("../example.txt");
+        let grid: Vec<Vec<usize>> = input
+            .lines()
+            .map(|line| {
+                line.chars()
+                    .map(|c| c.to_string().parse::<usize>().unwrap())
+                    .collect()
+            })
+            .collect();
+
+        let part_1_answer = part_1(grid.clone());
+
+        assert_eq!(part_1_answer, 102);
+    }
+}
