@@ -193,7 +193,11 @@ fn get_lowest_heat_loss(
         for s in new_states {
             let pos_min_weight = visited.get_weight(&s);
             let goal_min_weight = visited.get_min_weight(goal.0, goal.1);
-            if pos_min_weight > s.weight && goal_min_weight > s.weight {
+
+            let distance_to_goal = s.grid.x.abs_diff(goal.0) + s.grid.y.abs_diff(goal.1);
+            // compares with other iterations that have visited this node
+            // and that have visited the goal with a distance penalty
+            if pos_min_weight > s.weight && goal_min_weight > (s.weight + distance_to_goal - 1) {
                 states.push(s);
             }
         }
