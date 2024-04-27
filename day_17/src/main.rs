@@ -1,3 +1,5 @@
+use std::{time::Instant, usize};
+
 use library::grid::{Direction, GridState};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -63,6 +65,7 @@ fn crucible_move(grid: &Vec<Vec<usize>>, state: CrucibleState) -> Vec<CrucibleSt
         .collect()
 }
 
+#[derive(Debug, Clone, Copy)]
 struct VisitState {
     direction: Direction,
     weight: usize,
@@ -72,7 +75,7 @@ struct Visited {
     grid: Vec<Vec<Vec<VisitState>>>,
 }
 impl Visited {
-    fn get_weight(&self, state: CrucibleState) -> usize {
+    fn get_weight(&self, state: &CrucibleState) -> usize {
         let visit_state = &self.grid[state.grid.y][state.grid.x];
         let res = visit_state
             .iter()
@@ -83,7 +86,17 @@ impl Visited {
             None => usize::MAX,
         }
     }
-    fn set_weight(&mut self, state: CrucibleState) {
+    fn get_min_weight(&self, x: usize, y: usize) -> usize {
+        let res = self.grid[y][x]
+            .iter()
+            .min_by(|a, b| a.weight.partial_cmp(&b.weight).unwrap());
+
+        match res {
+            Some(a) => a.weight,
+            None => usize::MAX,
+        }
+    }
+    fn set_weight(&mut self, state: &CrucibleState) -> bool {
         let visit_state = &mut self.grid[state.grid.y][state.grid.x];
 
         let visit_find = visit_state
@@ -92,11 +105,15 @@ impl Visited {
 
         if visit_find.is_some() {
             let visit = visit_find.unwrap();
-            *visit = VisitState {
-                direction: state.grid.direction,
-                weight: state.weight,
-                run: state.run,
-            };
+            // if new weight is lower than current weight
+            if state.weight < visit.weight {
+                *visit = VisitState {
+                    weight: state.weight,
+                    ..*visit
+                };
+            } else {
+                return false;
+            }
         } else {
             visit_state.push(VisitState {
                 direction: state.grid.direction,
@@ -104,19 +121,51 @@ impl Visited {
                 run: state.run,
             });
         }
+        true
+    }
+    fn print_weights(&self, threshold: usize) {
+        for (y, line) in self.grid.iter().enumerate() {
+            for (x, _) in line.iter().enumerate() {
+                let weight = &self.grid[y][x];
+                for v_state in weight.iter() {
+                    if v_state.weight <= threshold {
+                        match v_state.direction {
+                            Direction::North => print!("N"),
+                            Direction::East => print!("E"),
+                            Direction::South => print!("S"),
+                            Direction::West => print!("W"),
+                        }
+                        if v_state.weight == usize::MAX {
+                            print!(".");
+                        } else {
+                            print!("{} ", v_state.weight);
+                        }
+                    }
+                }
+
+                print!(",");
+            }
+            println!("");
+        }
     }
 }
 
-fn get_lowest_heat_loss(grid: &Vec<Vec<usize>>, initial: &CrucibleState) -> usize {
-    // bounds check
-    let width = grid[0].len();
-    let height = grid.len();
+fn print_grid(grid: Vec<Vec<char>>) {
+    for line in grid {
+        for c in line {
+            print!("{c}");
+        }
+        println!("");
+    }
+}
 
-    let mut states: Vec<CrucibleState> = vec![CrucibleState {
-        weight: grid[initial.grid.y][initial.grid.x],
-        ..*initial
-    }];
-    println!("Initital: {:?}", states);
+fn get_lowest_heat_loss(
+    grid: &Vec<Vec<usize>>,
+    initial: &CrucibleState,
+    goal: (usize, usize),
+) -> usize {
+    // bounds check
+    let mut states: Vec<CrucibleState> = vec![initial.clone()];
 
     let mut visited = Visited {
         grid: grid
@@ -125,63 +174,38 @@ fn get_lowest_heat_loss(grid: &Vec<Vec<usize>>, initial: &CrucibleState) -> usiz
             .collect(),
     };
 
-    // only check the lowest for each iteration
     while !states.is_empty() {
-        states.sort_by(|a, b| b.weight.partial_cmp(&a.weight).unwrap());
-        // println!("States {:?}", states);
+        if visited.get_min_weight(goal.0, goal.1) == usize::MAX {
+            states.sort_by(|a, b| {
+                let a_dist = a.grid.x.abs_diff(goal.0) + a.grid.y.abs_diff(goal.1);
+                let b_dist = b.grid.x.abs_diff(goal.0) + b.grid.y.abs_diff(goal.1);
+
+                b_dist.partial_cmp(&a_dist).unwrap()
+            });
+        }
 
         let state = states.pop().unwrap();
-        visited.set_weight(state);
+        visited.set_weight(&state);
 
-        let new_states = crucible_move(grid, state);
-        // println!("New States {:?}", new_states);
-
+        let mut new_states = crucible_move(grid, state.clone());
+        new_states.sort_by(|a, b| b.weight.partial_cmp(&a.weight).unwrap());
 
         for s in new_states {
-            if visited.get_weight(s) > s.weight {
+            let pos_min_weight = visited.get_weight(&s);
+            let goal_min_weight = visited.get_min_weight(goal.0, goal.1);
+            if pos_min_weight > s.weight && goal_min_weight > s.weight {
                 states.push(s);
             }
         }
     }
 
-    for (y, line) in visited.grid.iter().enumerate() {
-        for (x, _) in line.iter().enumerate() {
-            let weight = &visited.grid[y][x];
-            for v_state in weight.iter() {
-                match v_state.direction {
-                    Direction::North => print!("N"),
-                    Direction::East => print!("E"),
-                    Direction::South => print!("S"),
-                    Direction::West => print!("W"),
-                }
-                if v_state.weight == usize::MAX {
-                    print!(".");
-                } else {
-                    print!("{} ", v_state.weight);
-                }
-            }
-
-            print!(",");
-        }
-        println!("");
-    }
-
-    visited
-        .grid
-        .last()
-        .unwrap()
-        .last()
-        .unwrap()
-        .iter()
-        .min_by(|a, b| a.weight.partial_cmp(&b.weight).unwrap())
-        .unwrap()
-        .weight
+    visited.get_min_weight(goal.0, goal.1)
 }
 
 fn main() {
-    let input = include_str!("../example.txt");
+    let input = include_str!("../input.txt");
 
-    let crucible: Vec<Vec<usize>> = input
+    let grid: Vec<Vec<usize>> = input
         .lines()
         .map(|line| {
             line.chars()
@@ -189,10 +213,6 @@ fn main() {
                 .collect()
         })
         .collect();
-
-    for line in input.lines() {
-        println!("{line}");
-    }
 
     let initial = CrucibleState {
         grid: GridState {
@@ -204,6 +224,12 @@ fn main() {
         weight: 0,
     };
 
-    let test = get_lowest_heat_loss(&crucible, &initial);
-    println!("test {test}");
+    // bounds check
+    let width = (grid[0].len() - 1) as usize;
+    let height = (grid.len() - 1) as usize;
+
+    let start: Instant = Instant::now();
+    let part_1_answer = get_lowest_heat_loss(&grid, &initial, (width, height));
+    let duration = start.elapsed();
+    println!("Part 1 anwer: {part_1_answer}, time: {:?}", duration);
 }
