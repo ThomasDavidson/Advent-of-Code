@@ -207,19 +207,8 @@ fn get_lowest_heat_loss(
     visited.get_min_weight(goal.0, goal.1)
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
-
-    let grid: Vec<Vec<usize>> = input
-        .lines()
-        .map(|line| {
-            line.chars()
-                .map(|c| c.to_string().parse::<usize>().unwrap())
-                .collect()
-        })
-        .collect();
-
-    let initial = CrucibleState {
+fn part_1(grid: Vec<Vec<usize>>) -> usize {
+    let initial: CrucibleState = CrucibleState {
         grid: GridState {
             direction: Direction::None,
             x: 0,
@@ -233,8 +222,23 @@ fn main() {
     let width = (grid[0].len() - 1) as usize;
     let height = (grid.len() - 1) as usize;
 
+    get_lowest_heat_loss(&grid, &initial, (width, height))
+}
+
+fn main() {
+    let input = include_str!("../example2.txt");
+
+    let grid: Vec<Vec<usize>> = input
+        .lines()
+        .map(|line| {
+            line.chars()
+                .map(|c| c.to_string().parse::<usize>().unwrap())
+                .collect()
+        })
+        .collect();
+
     let start: Instant = Instant::now();
-    let part_1_answer = get_lowest_heat_loss(&grid, &initial, (width, height));
+    let part_1_answer = part_1(grid.clone());
     let duration = start.elapsed();
     println!("Part 1 anwer: {part_1_answer}, time: {:?}", duration);
 }
