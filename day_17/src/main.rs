@@ -89,7 +89,7 @@ impl Visited {
     fn get_min_weight(&self, x: usize, y: usize) -> usize {
         let res = self.grid[y][x]
             .iter()
-            .min_by(|a, b| a.weight.partial_cmp(&b.weight).unwrap());
+            .find(|state| state.direction == Direction::None);
 
         match res {
             Some(a) => a.weight,
