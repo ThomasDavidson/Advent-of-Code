@@ -1,6 +1,6 @@
 use std::{time::Instant, usize};
 
-use library::grid::{Direction, GridState};
+use library::grid::{Direction, DirectionFilter, GridState};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct CrucibleState {
@@ -8,13 +8,13 @@ struct CrucibleState {
     run: usize,
     weight: usize,
 }
-type DirectionFilter = dyn Fn(CrucibleState) -> Vec<Direction>;
+type NextDirection = dyn Fn(CrucibleState) -> Vec<Direction>;
 
 // take current state and return valid states for next iteration
 fn crucible_move(
     grid: &Vec<Vec<usize>>,
     state: CrucibleState,
-    next_direction: &DirectionFilter,
+    next_direction: &NextDirection,
 ) -> Vec<CrucibleState> {
     let directions: Vec<Direction> = next_direction(state);
 
@@ -175,7 +175,7 @@ fn get_lowest_heat_loss(
     grid: &Vec<Vec<usize>>,
     initial: &CrucibleState,
     (goal_x, goal_y): (usize, usize),
-    next_direction: &DirectionFilter,
+    next_direction: &NextDirection,
 ) -> usize {
     // bounds check
     let mut states: Vec<CrucibleState> = vec![initial.clone()];
@@ -235,7 +235,7 @@ fn part_1(grid: Vec<Vec<usize>>) -> usize {
     let width = (grid[0].len() - 1) as usize;
     let height = (grid.len() - 1) as usize;
 
-    let filter: &DirectionFilter = &|state: CrucibleState| match (state.run, state.grid.direction) {
+    let filter: &NextDirection = &|state: CrucibleState| match (state.run, state.grid.direction) {
         // stop cannot start again
         (0, Direction::None) => vec![],
         // Starting state
@@ -246,19 +246,13 @@ fn part_1(grid: Vec<Vec<usize>>) -> usize {
             Direction::West,
         ],
         // all except inverse
-        (0..=1, d) => {
-            use library::grid::DirectionFilter;
-            d.next(vec![
-                DirectionFilter::Forword,
-                DirectionFilter::Turn,
-                DirectionFilter::Stop,
-            ])
-        }
+        (0..=1, d) => d.next(vec![
+            DirectionFilter::Forword,
+            DirectionFilter::Turn,
+            DirectionFilter::Stop,
+        ]),
         // only right or left
-        (2, d) => {
-            use library::grid::DirectionFilter;
-            d.next(vec![DirectionFilter::Turn, DirectionFilter::Stop])
-        }
+        (2, d) => d.next(vec![DirectionFilter::Turn, DirectionFilter::Stop]),
         _ => panic!("Invalid state"),
     };
 
@@ -280,7 +274,7 @@ fn part_2(grid: Vec<Vec<usize>>) -> usize {
     let width = (grid[0].len() - 1) as usize;
     let height = (grid.len() - 1) as usize;
 
-    let filter: &DirectionFilter = &|state: CrucibleState| match (state.run, state.grid.direction) {
+    let filter: &NextDirection = &|state: CrucibleState| match (state.run, state.grid.direction) {
         // stop cannot start again
         (0, Direction::None) => vec![],
         // Starting state
@@ -291,23 +285,14 @@ fn part_2(grid: Vec<Vec<usize>>) -> usize {
             Direction::West,
         ],
         // all except inverse
-        (0..=2, d) => {
-            use library::grid::DirectionFilter;
-            d.next(vec![DirectionFilter::Forword])
-        }
-        (3..=8, d) => {
-            use library::grid::DirectionFilter;
-            d.next(vec![
-                DirectionFilter::Forword,
-                DirectionFilter::Turn,
-                DirectionFilter::Stop,
-            ])
-        }
+        (0..=2, d) => d.next(vec![DirectionFilter::Forword]),
+        (3..=8, d) => d.next(vec![
+            DirectionFilter::Forword,
+            DirectionFilter::Turn,
+            DirectionFilter::Stop,
+        ]),
         // only right or left
-        (9, d) => {
-            use library::grid::DirectionFilter;
-            d.next(vec![DirectionFilter::Turn, DirectionFilter::Stop])
-        }
+        (9, d) => d.next(vec![DirectionFilter::Turn, DirectionFilter::Stop]),
         _ => panic!("Invalid state"),
     };
     get_lowest_heat_loss(&grid, &initial, (width, height), &filter)
