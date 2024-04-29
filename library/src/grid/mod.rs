@@ -15,7 +15,7 @@ pub enum Direction {
     West,
 }
 impl Direction {
-    pub fn to_char(&self) -> char {
+    pub const fn to_char(&self) -> char {
         match self {
             Direction::North => '^',
             Direction::East => '>',
@@ -25,7 +25,7 @@ impl Direction {
         }
     }
 
-    pub fn get_translation(self) -> (i16, i16) {
+    pub const fn get_translation(self) -> (i16, i16) {
         match self {
             Direction::North => (0, -1),
             Direction::East => (1, 0),
@@ -34,7 +34,7 @@ impl Direction {
             Direction::None => (0, 0),
         }
     }
-    pub fn inverse(self) -> Self {
+    pub const fn inverse(self) -> Self {
         match self {
             Direction::North => Direction::South,
             Direction::East => Direction::West,
@@ -43,7 +43,7 @@ impl Direction {
             Direction::None => Direction::None,
         }
     }
-    pub fn right(self) -> Self {
+    pub const fn right(self) -> Self {
         match self {
             Direction::North => Direction::East,
             Direction::East => Direction::South,
@@ -53,7 +53,7 @@ impl Direction {
         }
     }
 
-    pub fn left(self) -> Self {
+    pub const fn left(self) -> Self {
         self.right().inverse()
     }
 
@@ -65,6 +65,7 @@ impl Direction {
         Direction::None,
     ];
     // Todo breaks from duplicates
+    // should be constant
     pub fn next(&self, filters: Vec<DirectionFilter>) -> Vec<Direction> {
         let mut ret: Vec<Direction> = Vec::new();
         for filter in filters {
@@ -95,7 +96,7 @@ pub struct GridState {
     pub y: usize,
 }
 impl GridState {
-    pub fn check_bounds(&self, width: usize, height: usize) -> bool {
+    pub const fn check_bounds(&self, width: usize, height: usize) -> bool {
         match self.direction {
             Direction::South => {
                 if self.y + 1 == height {
