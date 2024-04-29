@@ -64,6 +64,7 @@ impl Direction {
         Direction::West,
         Direction::None,
     ];
+    // Todo breaks from duplicates
     pub fn next(&self, filters: Vec<DirectionFilter>) -> Vec<Direction> {
         let mut ret: Vec<Direction> = Vec::new();
         for filter in filters {
