@@ -8,20 +8,15 @@ struct CrucibleState {
     run: usize,
     weight: usize,
 }
+type DirectionFilter = dyn Fn(CrucibleState) -> Vec<Direction>;
 
 // take current state and return valid states for next iteration
-fn crucible_move(grid: &Vec<Vec<usize>>, state: CrucibleState) -> Vec<CrucibleState> {
-    let directions: Vec<Direction> = vec![
-        Direction::East,
-        Direction::North,
-        Direction::South,
-        Direction::West,
-    ]
-    .into_iter()
-    .filter(|&d| !(d == state.grid.direction.inverse()))
-    .collect();
-
-    // println!("directions: {:?}", directions);
+fn crucible_move(
+    grid: &Vec<Vec<usize>>,
+    state: CrucibleState,
+    next_direction: &DirectionFilter,
+) -> Vec<CrucibleState> {
+    let directions: Vec<Direction> = next_direction(state);
 
     // bounds check
     let width = grid[0].len();
@@ -42,9 +37,6 @@ fn crucible_move(grid: &Vec<Vec<usize>>, state: CrucibleState) -> Vec<CrucibleSt
             },
             ..state
         })
-        // filter out direction if it results in a strait line for over 3 in a row
-        .filter(|new_state| new_state.run < 3)
-        //  check if the result is in bounds
         .filter(|new_state| new_state.grid.check_bounds(width, height))
         .map(|new_state| {
             let (x, y) = new_state.grid.direction.get_translation();
@@ -58,9 +50,16 @@ fn crucible_move(grid: &Vec<Vec<usize>>, state: CrucibleState) -> Vec<CrucibleSt
             }
         })
         // Caclulate weight
-        .map(|new_state| CrucibleState {
-            weight: new_state.weight + grid[new_state.grid.y][new_state.grid.x],
-            ..new_state
+        .map(|new_state| {
+            // stopping doesn't add any weight
+            let new_weight = match new_state.grid.direction {
+                Direction::None => new_state.weight,
+                _ => new_state.weight + grid[new_state.grid.y][new_state.grid.x],
+            };
+            CrucibleState {
+                weight: new_weight,
+                ..new_state
+            }
         })
         .collect()
 }
@@ -151,6 +150,18 @@ impl Visited {
     }
 }
 
+fn print_path(paths: &Vec<GridState>, width: usize, height: usize) {
+    let mut path_grid: Vec<Vec<char>> = (0..=height)
+        .map(|_| (0..=width).map(|_| '.').collect())
+        .collect();
+
+    for path in paths {
+        path_grid[path.y][path.x] = path.direction.to_char();
+    }
+
+    print_grid(path_grid);
+}
+
 fn print_grid(grid: Vec<Vec<char>>) {
     for line in grid {
         for c in line {
@@ -163,7 +174,8 @@ fn print_grid(grid: Vec<Vec<char>>) {
 fn get_lowest_heat_loss(
     grid: &Vec<Vec<usize>>,
     initial: &CrucibleState,
-    goal: (usize, usize),
+    (goal_x, goal_y): (usize, usize),
+    next_direction: &DirectionFilter,
 ) -> usize {
     // bounds check
     let mut states: Vec<CrucibleState> = vec![initial.clone()];
@@ -176,10 +188,10 @@ fn get_lowest_heat_loss(
     };
 
     while !states.is_empty() {
-        if visited.get_min_weight(goal.0, goal.1) == usize::MAX {
+        if visited.get_min_weight(goal_x, goal_y) == usize::MAX {
             states.sort_by(|a, b| {
-                let a_dist = a.grid.x.abs_diff(goal.0) + a.grid.y.abs_diff(goal.1);
-                let b_dist = b.grid.x.abs_diff(goal.0) + b.grid.y.abs_diff(goal.1);
+                let a_dist = a.grid.x.abs_diff(goal_x) + a.grid.y.abs_diff(goal_y);
+                let b_dist = b.grid.x.abs_diff(goal_x) + b.grid.y.abs_diff(goal_y);
 
                 b_dist.partial_cmp(&a_dist).unwrap()
             });
@@ -188,14 +200,14 @@ fn get_lowest_heat_loss(
         let state = states.pop().unwrap();
         visited.set_weight(&state);
 
-        let mut new_states = crucible_move(grid, state.clone());
+        let mut new_states = crucible_move(grid, state, next_direction);
         new_states.sort_by(|a, b| b.weight.partial_cmp(&a.weight).unwrap());
 
         for s in new_states {
             let pos_min_weight = visited.get_weight(&s);
-            let goal_min_weight = visited.get_min_weight(goal.0, goal.1);
+            let goal_min_weight = visited.get_min_weight(goal_x, goal_y);
 
-            let distance_to_goal = s.grid.x.abs_diff(goal.0) + s.grid.y.abs_diff(goal.1);
+            let distance_to_goal = s.grid.x.abs_diff(goal_x) + s.grid.y.abs_diff(goal_y);
             // compares with other iterations that have visited this node
             // and that have visited the goal with a distance penalty
             if pos_min_weight > s.weight && goal_min_weight > (s.weight + distance_to_goal - 1) {
@@ -204,17 +216,18 @@ fn get_lowest_heat_loss(
         }
     }
 
-    visited.get_min_weight(goal.0, goal.1)
+    visited.get_min_weight(goal_x, goal_y)
 }
 
 fn part_1(grid: Vec<Vec<usize>>) -> usize {
+    let initial_grid = GridState {
+        direction: Direction::None,
+        x: 0,
+        y: 0,
+    };
     let initial: CrucibleState = CrucibleState {
-        grid: GridState {
-            direction: Direction::None,
-            x: 0,
-            y: 0,
-        },
-        run: 0,
+        grid: initial_grid,
+        run: 1,
         weight: 0,
     };
 
@@ -222,11 +235,38 @@ fn part_1(grid: Vec<Vec<usize>>) -> usize {
     let width = (grid[0].len() - 1) as usize;
     let height = (grid.len() - 1) as usize;
 
-    get_lowest_heat_loss(&grid, &initial, (width, height))
+    let filter: &DirectionFilter = &|state: CrucibleState| match (state.run, state.grid.direction) {
+        // stop cannot start again
+        (0, Direction::None) => vec![],
+        // Starting state
+        (1, Direction::None) => vec![
+            Direction::North,
+            Direction::East,
+            Direction::South,
+            Direction::West,
+        ],
+        // all except inverse
+        (0..=1, d) => {
+            use library::grid::DirectionFilter;
+            d.next(vec![
+                DirectionFilter::Forword,
+                DirectionFilter::Turn,
+                DirectionFilter::Stop,
+            ])
+        }
+        // only right or left
+        (2, d) => {
+            use library::grid::DirectionFilter;
+            d.next(vec![DirectionFilter::Turn, DirectionFilter::Stop])
+        }
+        _ => panic!("Invalid state"),
+    };
+
+    get_lowest_heat_loss(&grid, &initial, (width, height), &filter)
 }
 
 fn main() {
-    let input = include_str!("../example2.txt");
+    let input = include_str!("../input.txt");
 
     let grid: Vec<Vec<usize>> = input
         .lines()
@@ -261,5 +301,22 @@ mod tests {
         let part_1_answer = part_1(grid.clone());
 
         assert_eq!(part_1_answer, 102);
+    }
+
+    #[test]
+    fn check_example_2() {
+        let input = include_str!("../example2.txt");
+        let grid: Vec<Vec<usize>> = input
+            .lines()
+            .map(|line| {
+                line.chars()
+                    .map(|c| c.to_string().parse::<usize>().unwrap())
+                    .collect()
+            })
+            .collect();
+
+        let part_1_answer = part_2(grid.clone());
+
+        assert_eq!(part_1_answer, 71);
     }
 }
