@@ -265,6 +265,54 @@ fn part_1(grid: Vec<Vec<usize>>) -> usize {
     get_lowest_heat_loss(&grid, &initial, (width, height), &filter)
 }
 
+fn part_2(grid: Vec<Vec<usize>>) -> usize {
+    let initial: CrucibleState = CrucibleState {
+        grid: GridState {
+            direction: Direction::None,
+            x: 0,
+            y: 0,
+        },
+        run: 1,
+        weight: 0,
+    };
+
+    // bounds check
+    let width = (grid[0].len() - 1) as usize;
+    let height = (grid.len() - 1) as usize;
+
+    let filter: &DirectionFilter = &|state: CrucibleState| match (state.run, state.grid.direction) {
+        // stop cannot start again
+        (0, Direction::None) => vec![],
+        // Starting state
+        (1, Direction::None) => vec![
+            Direction::North,
+            Direction::East,
+            Direction::South,
+            Direction::West,
+        ],
+        // all except inverse
+        (0..=2, d) => {
+            use library::grid::DirectionFilter;
+            d.next(vec![DirectionFilter::Forword])
+        }
+        (3..=8, d) => {
+            use library::grid::DirectionFilter;
+            d.next(vec![
+                DirectionFilter::Forword,
+                DirectionFilter::Turn,
+                DirectionFilter::Stop,
+            ])
+        }
+        // only right or left
+        (9, d) => {
+            use library::grid::DirectionFilter;
+            d.next(vec![DirectionFilter::Turn, DirectionFilter::Stop])
+        }
+        _ => panic!("Invalid state"),
+    };
+    get_lowest_heat_loss(&grid, &initial, (width, height), &filter)
+}
+
 fn main() {
     let input = include_str!("../input.txt");
 
@@ -281,6 +329,11 @@ fn main() {
     let part_1_answer = part_1(grid.clone());
     let duration = start.elapsed();
     println!("Part 1 anwer: {part_1_answer}, time: {:?}", duration);
+
+    let start: Instant = Instant::now();
+    let part_2_answer = part_2(grid.clone());
+    let duration = start.elapsed();
+    println!("Part 2 anwer: {part_2_answer}, time: {:?}", duration);
 }
 
 #[cfg(test)]
