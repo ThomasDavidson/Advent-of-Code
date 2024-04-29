@@ -1,4 +1,12 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
+pub enum DirectionFilter {
+    Forword,
+    Turn,
+    Stop,
+    Backwords,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Direction {
     None,
     North,
@@ -7,6 +15,16 @@ pub enum Direction {
     West,
 }
 impl Direction {
+    pub fn to_char(&self) -> char {
+        match self {
+            Direction::North => '^',
+            Direction::East => '>',
+            Direction::South => 'v',
+            Direction::West => '<',
+            Direction::None => 'o',
+        }
+    }
+
     pub fn get_translation(self) -> (i16, i16) {
         match self {
             Direction::North => (0, -1),
@@ -24,6 +42,48 @@ impl Direction {
             Direction::West => Direction::East,
             Direction::None => Direction::None,
         }
+    }
+    pub fn right(self) -> Self {
+        match self {
+            Direction::North => Direction::East,
+            Direction::East => Direction::South,
+            Direction::South => Direction::West,
+            Direction::West => Direction::North,
+            Direction::None => Direction::None,
+        }
+    }
+
+    pub fn left(self) -> Self {
+        self.right().inverse()
+    }
+
+    pub const ALL: [Direction; 5] = [
+        Direction::North,
+        Direction::East,
+        Direction::South,
+        Direction::West,
+        Direction::None,
+    ];
+    pub fn next(&self, filters: Vec<DirectionFilter>) -> Vec<Direction> {
+        let mut ret: Vec<Direction> = Vec::new();
+        for filter in filters {
+            match filter {
+                DirectionFilter::Forword => {
+                    ret.push(*self);
+                }
+                DirectionFilter::Turn => {
+                    ret.push(self.left());
+                    ret.push(self.right());
+                }
+                DirectionFilter::Stop => {
+                    ret.push(Direction::None);
+                }
+                DirectionFilter::Backwords => {
+                    ret.push(self.inverse());
+                }
+            }
+        }
+        ret
     }
 }
 
