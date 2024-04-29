@@ -64,26 +64,20 @@ impl Direction {
         Direction::West,
         Direction::None,
     ];
-    // Todo breaks from duplicates
     // should be constant
     pub fn next(&self, filters: Vec<DirectionFilter>) -> Vec<Direction> {
         let mut ret: Vec<Direction> = Vec::new();
-        for filter in filters {
-            match filter {
-                DirectionFilter::Forword => {
-                    ret.push(*self);
-                }
-                DirectionFilter::Turn => {
-                    ret.push(self.left());
-                    ret.push(self.right());
-                }
-                DirectionFilter::Stop => {
-                    ret.push(Direction::None);
-                }
-                DirectionFilter::Backwords => {
-                    ret.push(self.inverse());
-                }
-            }
+        if filters.contains(&DirectionFilter::Forword) {
+            ret.push(*self);
+        }
+        if filters.contains(&DirectionFilter::Turn) {
+            ret.push(self.left());
+            ret.push(self.right());        }
+        if filters.contains(&DirectionFilter::Stop) {
+            ret.push(Direction::None);
+        }
+        if filters.contains(&DirectionFilter::Backwords) {
+            ret.push(self.inverse());
         }
         ret
     }
