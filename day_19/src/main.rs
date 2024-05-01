@@ -128,6 +128,52 @@ impl Ratings {
         self.x + self.m + self.a + self.s
     }
 }
+#[derive(Debug, Clone)]
+struct RatingsRange {
+    x: Range<usize>,
+    m: Range<usize>,
+    a: Range<usize>,
+    s: Range<usize>,
+}
+impl RatingsRange {
+    fn get_permutations(&self) -> usize {
+        self.x.len() * self.m.len() * self.a.len() * self.s.len()
+    }
+    fn get_value(&self, c: char) -> Range<usize> {
+        match c {
+            'x' => self.x.clone(),
+            'm' => self.m.clone(),
+            'a' => self.a.clone(),
+            's' => self.s.clone(),
+            _ => panic!("invalid char {c}"),
+        }
+    }
+    fn contains(&self, c: char, num: usize) -> bool {
+        let range = self.get_value(c);
+        range.contains(&num)
+    }
+    fn update_value(&self, c: char, new_range: Range<usize>) -> Self {
+        match c {
+            'x' => Self {
+                x: new_range,
+                ..self.clone()
+            },
+            'm' => Self {
+                m: new_range,
+                ..self.clone()
+            },
+            'a' => Self {
+                a: new_range,
+                ..self.clone()
+            },
+            's' => Self {
+                s: new_range,
+                ..self.clone()
+            },
+            _ => panic!("invalid char {c}"),
+        }
+    }
+}
 
 fn parse_ratings_input(ratings_str: &str) -> Vec<Ratings> {
     ratings_str
@@ -173,13 +219,11 @@ fn check_machine_part(rating: &Ratings, workflows: &Vec<Workflow>) -> bool {
 }
 
 fn check_catagory_range(
-    range: Range<usize>,
-    range_catagory: char,
+    range: RatingsRange,
     workflows: &Vec<Workflow>,
     workflow_result: &WorkflowResult,
-) -> Vec<usize> {
-    println!("{} {:?}", range_catagory, workflow_result);
-    let mut accepted_scores: Vec<usize> = Vec::new();
+) -> usize {
+    let mut result = 0;
 
     let Some(selected_workflow) = workflows
         .iter()
@@ -191,73 +235,73 @@ fn check_catagory_range(
     let mut current_range = range.clone();
 
     for rule in &selected_workflow.workflow_rule {
-        let (mut result_range, next_range): (Vec<usize>, Range<usize>) = match rule {
+        let (permutations, next_range): (usize, Option<RatingsRange>) = match rule {
             WorkflowRule {
                 result: WorkflowResult::Accept(true),
                 rule: WorkflowCmp::Fallthrough,
-            } => (current_range.clone().collect(), 0..0),
+            } => (current_range.get_permutations(), None),
             WorkflowRule {
                 result: WorkflowResult::Accept(false),
                 rule: WorkflowCmp::Fallthrough,
-            } => (vec![], 0..0),
+            } => (0, None),
 
             WorkflowRule {
                 result: WorkflowResult::Workflow(_),
                 rule: WorkflowCmp::Fallthrough,
             } => (
-                check_catagory_range(current_range, range_catagory, workflows, &rule.result),
-                0..0,
+                check_catagory_range(current_range, workflows, &rule.result),
+                None,
             ),
 
             WorkflowRule {
                 result: _,
                 rule: WorkflowCmp::Threshold(threshold, catagory, greater),
             } => {
-                if *catagory != range_catagory || !current_range.contains(&threshold) {
+                if !current_range.contains(*catagory, *threshold) {
                     continue;
                 }
-                // println!("{:?}", current_range);
+                let caragory_range = current_range.get_value(*catagory);
 
-                let max_range = current_range.clone().max().unwrap();
-                let min_range = current_range.clone().min().unwrap();
+                let max_range = caragory_range.clone().max().unwrap();
+                let min_range = caragory_range.clone().min().unwrap();
 
                 let (accepted_range, regected_range) = match greater {
                     // only used Range to match arms
-                    true => ((threshold + 1)..(max_range + 1), min_range..(threshold + 1)),
-                    false => (min_range..*threshold, *threshold..(max_range + 1)),
+                    true => (min_range..*threshold, *threshold..(max_range + 1)),
+                    false => ((threshold + 1)..(max_range + 1), min_range..(threshold + 1)),
                 };
-                // println!(
-                //     "accepted_range: {:?} regected_range: {:?}",
-                //     accepted_range, regected_range
-                // );
-                let accepted_vec = match rule.result {
-                    // todo add other range to accept condition
+
+                // process the accepted range
+                let accepted_result: usize = match rule.result {
                     WorkflowResult::Accept(true) => {
-                        println!("Accept");
-                        accepted_range.collect()
+                        current_range
+                            .update_value(*catagory, accepted_range)
+                            .get_permutations()
                     }
                     WorkflowResult::Accept(false) => {
-                        println!("Reject");
-                        accepted_range.collect()
+                        0
                     }
                     WorkflowResult::Workflow(_) => check_catagory_range(
-                        accepted_range,
-                        range_catagory,
+                        current_range.update_value(*catagory, accepted_range),
                         workflows,
                         &rule.result,
                     ),
                 };
-                (accepted_vec, regected_range)
+                (
+                    accepted_result,
+                    Some(current_range.update_value(*catagory, regected_range)),
+                )
             }
         };
-        println!("len {:?} {:?}", result_range.len(), next_range);
-        accepted_scores.append(&mut result_range);
+        result += permutations;
 
-        current_range = next_range;
+        current_range = match next_range {
+            None => break,
+            Some(a) => a,
+        };
     }
 
-    println!("{:?} => {}", range, accepted_scores.len());
-    accepted_scores
+    result
 }
 
 fn part_1(ratings: &Vec<Ratings>, workflows: &Vec<Workflow>) -> usize {
@@ -273,36 +317,32 @@ fn part_1(ratings: &Vec<Ratings>, workflows: &Vec<Workflow>) -> usize {
 fn part_2(workflows: &Vec<Workflow>) -> usize {
     let range: Range<usize> = 1..(4000 + 1);
 
+    let ratigns_range = RatingsRange {
+        x: range.clone(),
+        m: range.clone(),
+        a: range.clone(),
+        s: range.clone(),
+    };
+
     let initial = WorkflowResult::Workflow("in".to_string());
 
-    let accepted_x = check_catagory_range(range.clone(), 'x', workflows, &initial).len();
-    let accepted_m = check_catagory_range(range.clone(), 'm', workflows, &initial).len();
-    let accepted_a = check_catagory_range(range.clone(), 'a', workflows, &initial).len();
-    let accepted_s = check_catagory_range(range.clone(), 's', workflows, &initial).len();
+    let part_2_answer = check_catagory_range(ratigns_range, workflows, &initial);
 
-    println!("accepted_x {accepted_x} accepted_m {accepted_m} accepted_a {accepted_a} accepted_s {accepted_s}");
-
-    vec![accepted_x, accepted_m, accepted_a, accepted_s]
-        .iter()
-        .fold(1, |acc, i| acc * i)
+    part_2_answer
 }
 
 fn main() {
-    let input = include_str!("../example.txt");
+    let input = include_str!("../input.txt");
 
     let (workflows_str, ratings_str) = input.split_once("\r\n\r\n").unwrap();
 
     let workflows = parse_workflows(workflows_str);
 
-    // for workflow in &workflows {
-    //     println!("{:#?}", workflow);
-    // }
-
     let ratings = parse_ratings_input(ratings_str);
 
     let part_1_score = part_1(&ratings, &workflows);
-    println!("Result: {part_1_score}");
+    println!("part 1 answer: {part_1_score}");
 
     let part_2_score = part_2(&workflows);
-    println!("Result: {part_2_score}");
+    println!("part 2 answer: {part_2_score}");
 }
