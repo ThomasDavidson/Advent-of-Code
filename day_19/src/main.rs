@@ -178,6 +178,7 @@ fn check_catagory_range(
     workflows: &Vec<Workflow>,
     workflow_result: &WorkflowResult,
 ) -> Vec<usize> {
+    println!("{} {:?}", range_catagory, workflow_result);
     let mut accepted_scores: Vec<usize> = Vec::new();
 
     let Some(selected_workflow) = workflows
@@ -190,10 +191,29 @@ fn check_catagory_range(
     let mut current_range = range.clone();
 
     for rule in &selected_workflow.workflow_rule {
-        let (mut result_range, next_range): (Vec<usize>, Range<usize>) = match rule.rule {
-            WorkflowCmp::Fallthrough => (current_range.clone().collect(), 0..0),
-            WorkflowCmp::Threshold(threshold, catagory, greater) => {
-                if catagory != range_catagory && !current_range.contains(&threshold) {
+        let (mut result_range, next_range): (Vec<usize>, Range<usize>) = match rule {
+            WorkflowRule {
+                result: WorkflowResult::Accept(true),
+                rule: WorkflowCmp::Fallthrough,
+            } => (current_range.clone().collect(), 0..0),
+            WorkflowRule {
+                result: WorkflowResult::Accept(false),
+                rule: WorkflowCmp::Fallthrough,
+            } => (vec![], 0..0),
+
+            WorkflowRule {
+                result: WorkflowResult::Workflow(_),
+                rule: WorkflowCmp::Fallthrough,
+            } => (
+                check_catagory_range(current_range, range_catagory, workflows, &rule.result),
+                0..0,
+            ),
+
+            WorkflowRule {
+                result: _,
+                rule: WorkflowCmp::Threshold(threshold, catagory, greater),
+            } => {
+                if *catagory != range_catagory || !current_range.contains(&threshold) {
                     continue;
                 }
                 // println!("{:?}", current_range);
@@ -204,8 +224,12 @@ fn check_catagory_range(
                 let (accepted_range, regected_range) = match greater {
                     // only used Range to match arms
                     true => ((threshold + 1)..(max_range + 1), min_range..(threshold + 1)),
-                    false => (min_range..threshold, threshold..(max_range + 1)),
+                    false => (min_range..*threshold, *threshold..(max_range + 1)),
                 };
+                // println!(
+                //     "accepted_range: {:?} regected_range: {:?}",
+                //     accepted_range, regected_range
+                // );
                 let accepted_vec = match rule.result {
                     // todo add other range to accept condition
                     WorkflowResult::Accept(true) => {
@@ -226,14 +250,9 @@ fn check_catagory_range(
                 (accepted_vec, regected_range)
             }
         };
-        println!("len {:?} {:?}", result_range.len(), rule);
+        println!("len {:?} {:?}", result_range.len(), next_range);
         accepted_scores.append(&mut result_range);
-        // match (&rule.result, &rule.rule) {
-        //     (WorkflowResult::Accept(true), WorkflowCmp::Fallthrough) => {
-        //         accepted_scores.append(&mut result_range);
-        //     }
-        //     (_, _) => (),
-        // }
+
         current_range = next_range;
     }
 
@@ -252,7 +271,7 @@ fn part_1(ratings: &Vec<Ratings>, workflows: &Vec<Workflow>) -> usize {
 }
 
 fn part_2(workflows: &Vec<Workflow>) -> usize {
-    let range = 1..(4000 + 1);
+    let range: Range<usize> = 1..(4000 + 1);
 
     let initial = WorkflowResult::Workflow("in".to_string());
 
@@ -265,7 +284,7 @@ fn part_2(workflows: &Vec<Workflow>) -> usize {
 
     vec![accepted_x, accepted_m, accepted_a, accepted_s]
         .iter()
-        .fold(0, |acc, i| acc + i)
+        .fold(1, |acc, i| acc * i)
 }
 
 fn main() {
