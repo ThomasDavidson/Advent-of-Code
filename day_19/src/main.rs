@@ -26,13 +26,19 @@ impl WorkflowCmp {
     fn parse(str: &str) -> Self {
         let greater: bool = str.contains("<");
 
-        let (catagory_str, threshold_str) = match greater {
-            true => str.split_once("<").unwrap(),
-            false => str.split_once(">").unwrap(),
+        let Some((catagory_str, threshold_str)) = (match greater {
+            true => str.split_once("<"),
+            false => str.split_once(">"),
+        }) else {
+            panic!("Parsed input cannot be split");
         };
 
-        let threshold = threshold_str.parse().unwrap();
-        let catagory = catagory_str.chars().nth(0).unwrap();
+        let Ok(threshold) = threshold_str.parse() else {
+            panic!("Cannot parse threshold for workflow");
+        };
+        let Some(catagory) = catagory_str.chars().nth(0) else {
+            panic!("Cannot parse catagory for workflow");
+        };
 
         WorkflowCmp::Threshold(threshold, catagory, greater)
     }
@@ -55,7 +61,9 @@ fn parse_workflows(workflows_str: &str) -> Vec<Workflow> {
     for line in workflows_str.lines() {
         let mut split = line.split(['{', '}', ',']).filter(|a| !a.is_empty());
         // label is allways the first split item
-        let label = split.next().unwrap();
+        let Some(label) = split.next() else {
+            panic!("Cannot parse label from workflows");
+        };
         let mut workflow = Workflow {
             label: label.to_string(),
             workflow_rule: Vec::new(),
@@ -104,7 +112,9 @@ impl Ratings {
             s: 0,
         };
         for (i, rating) in str.iter().enumerate() {
-            let rating: usize = rating[2..].parse().unwrap();
+            let Ok(rating) = rating[2..].parse::<usize>() else {
+                panic!("Cannot parse rating");
+            };
             match i {
                 0 => ratings.x = rating,
                 1 => ratings.m = rating,
@@ -262,8 +272,12 @@ fn check_catagory_range(
                 }
                 let caragory_range = current_range.get_value(*catagory);
 
-                let max_range = caragory_range.clone().max().unwrap();
-                let min_range = caragory_range.clone().min().unwrap();
+                let Some(max_range) = caragory_range.clone().max() else {
+                    panic!("Cannot get max value of range. The range might have been been reversed ex. max..min");
+                };
+                let Some(min_range) = caragory_range.clone().min() else {
+                    panic!("Cannot get min value of range. The range might have been been reversed ex. max..min");
+                };
 
                 let (accepted_range, regected_range) = match greater {
                     // only used Range to match arms
@@ -273,14 +287,10 @@ fn check_catagory_range(
 
                 // process the accepted range
                 let accepted_result: usize = match rule.result {
-                    WorkflowResult::Accept(true) => {
-                        current_range
-                            .update_value(*catagory, accepted_range)
-                            .get_permutations()
-                    }
-                    WorkflowResult::Accept(false) => {
-                        0
-                    }
+                    WorkflowResult::Accept(true) => current_range
+                        .update_value(*catagory, accepted_range)
+                        .get_permutations(),
+                    WorkflowResult::Accept(false) => 0,
                     WorkflowResult::Workflow(_) => check_catagory_range(
                         current_range.update_value(*catagory, accepted_range),
                         workflows,
@@ -334,7 +344,9 @@ fn part_2(workflows: &Vec<Workflow>) -> usize {
 fn main() {
     let input = include_str!("../input.txt");
 
-    let (workflows_str, ratings_str) = input.split_once("\r\n\r\n").unwrap();
+    let Some((workflows_str, ratings_str)) = input.split_once("\r\n\r\n") else {
+        panic!("Invalid input");
+    };
 
     let workflows = parse_workflows(workflows_str);
 
