@@ -247,7 +247,7 @@ fn part_1(grid: Vec<Vec<usize>>) -> usize {
         ],
         // all except inverse
         (0..=1, d) => d.next(vec![
-            DirectionFilter::Forword,
+            DirectionFilter::Forward,
             DirectionFilter::Turn,
             DirectionFilter::Stop,
         ]),
@@ -285,9 +285,9 @@ fn part_2(grid: Vec<Vec<usize>>) -> usize {
             Direction::West,
         ],
         // all except inverse
-        (0..=2, d) => d.next(vec![DirectionFilter::Forword]),
+        (0..=2, d) => d.next(vec![DirectionFilter::Forward]),
         (3..=8, d) => d.next(vec![
-            DirectionFilter::Forword,
+            DirectionFilter::Forward,
             DirectionFilter::Turn,
             DirectionFilter::Stop,
         ]),

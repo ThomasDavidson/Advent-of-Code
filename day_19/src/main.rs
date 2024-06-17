@@ -21,7 +21,7 @@ enum WorkflowCmp {
     Threshold(usize, char, bool),
 }
 impl WorkflowCmp {
-    // pass in a string that has the pattern catagory then < or > then number
+    // pass in a string that has the pattern category then < or > then number
     // ie a<2006
     fn parse(str: &str) -> Self {
         let greater: bool = str.contains("<");

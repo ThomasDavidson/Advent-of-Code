@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DirectionFilter {
-    Forword,
+    Forward,
     Turn,
     Stop,
     Backwords,
@@ -67,7 +67,7 @@ impl Direction {
     // should be constant
     pub fn next(&self, filters: Vec<DirectionFilter>) -> Vec<Direction> {
         let mut ret: Vec<Direction> = Vec::new();
-        if filters.contains(&DirectionFilter::Forword) {
+        if filters.contains(&DirectionFilter::Forward) {
             ret.push(*self);
         }
         if filters.contains(&DirectionFilter::Turn) {
