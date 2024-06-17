@@ -28,13 +28,12 @@ fn beam_move(contraction: &Vec<Vec<char>>, state: GridState) -> Vec<GridState> {
     directions
         .iter()
         .map(|&direction| GridState {
-            direction: direction,
+            direction,
             ..state
         })
         .filter(|state| state.check_bounds(width, height))
         .map(|state| {
             let (x, y) = state.direction.get_translation();
-            // println!("x {x} y {y} -> {} {}", state.x as i16 + x, state.y as i16 + y);
             GridState {
                 x: (state.x as i16 + x) as usize,
                 y: (state.y as i16 + y) as usize,
@@ -46,9 +45,9 @@ fn beam_move(contraction: &Vec<Vec<char>>, state: GridState) -> Vec<GridState> {
 
 fn get_energized_count(contraction: &Vec<Vec<char>>, initial: &GridState) -> usize {
     // North, East, South, West
-    let mut visited: Vec<Vec<[bool; 4]>> = contraction
+    let mut visited: Vec<Vec<[bool; 5]>> = contraction
         .iter()
-        .map(|a| a.iter().map(|_| [false; 4]).collect())
+        .map(|a| a.iter().map(|_| [false; 5]).collect())
         .collect();
 
     let mut states = vec![initial.clone()];
@@ -87,8 +86,8 @@ fn part_1(contraction: &Vec<Vec<char>>) -> usize {
 }
 
 fn part_2(contraction: &Vec<Vec<char>>) -> usize {
-    let width = (contraction[0].len() - 1) as usize;
-    let height = (contraction.len() - 1) as usize;
+    let width = contraction[0].len() - 1;
+    let height = contraction.len() - 1;
 
     let north_initial: Vec<GridState> = (0..width)
         .map(|i| GridState {
@@ -121,7 +120,7 @@ fn part_2(contraction: &Vec<Vec<char>>) -> usize {
         })
         .collect();
 
-    let inital_states: Vec<GridState> = vec![
+    let initial_states: Vec<GridState> = vec![
         north_initial,
         west_initial,
         east_initial,
@@ -129,7 +128,7 @@ fn part_2(contraction: &Vec<Vec<char>>) -> usize {
     ].into_iter().flatten().collect();
 
 
-    inital_states
+    initial_states
         .iter()
         .map(|initial| get_energized_count(contraction, initial))
         .max()
@@ -144,10 +143,10 @@ fn main() {
     let start: Instant = Instant::now();
     let part_1_answer = part_1(&contraction);
     let duration = start.elapsed();
-    println!("Part 1 anwer: {}, time: {:?}", part_1_answer, duration);
+    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
 
     let start: Instant = Instant::now();
     let part_2_answer = part_2(&contraction);
     let duration = start.elapsed();
-    println!("Part 2 anwer: {}, time: {:?}", part_2_answer, duration);
+    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
 }
