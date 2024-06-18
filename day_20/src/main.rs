@@ -39,15 +39,18 @@ impl ModuleType {
                 }
             ,
             Conjunction(inputs) => {
+                // println!("Conjunction: {:?}", inputs);
                 let input_pos = inputs.partition_point(|input| input.0.as_str() == label);
                 let Some(input) = inputs.get_mut(input_pos)else {
                     panic!("Conjunction called from not connected module");
                 };
                 input.1 = *signal_level;
 
+                // println!("Conjunction: {:?}", inputs);
+
                 match inputs.iter().all(|input| input.1 == Low) {
-                    true => Some(Low),
-                    false => Some(High),
+                    true => Some(High),
+                    false => Some(Low),
                 }
             }
             Broadcast => Some(*signal_level),
@@ -123,4 +126,29 @@ fn main() {
         println!("{:?}", module);
     }
 
+    println!();
+
+    let mut signals = VecDeque::from([("broadcaster".to_string(), Low)]);
+
+    while let Some((module_label, signal)) = signals.pop_front() {
+        let Some(module_index) = machine.iter().position(|module| module.label == module_label) else {
+            panic!("Invalid label");
+        };
+        // println!("{}, index: {}", module_label, module_index);
+        let Some(module) = machine.get_mut(module_index) else {
+            panic!("Invalid label");
+        };
+
+        let Some(new_signal) = module.module_type.handle_pulse(&module_label, &signal) else {
+            // println!("Skip {}", module_label);
+            continue;
+        };
+
+        // println!("{:?}", module);
+
+        for destination in &module.destinations {
+            println!("{} -{:?}> {}", module_label, new_signal, destination);
+            signals.push_back((destination.to_string(), new_signal));
+        }
+    }
 }
