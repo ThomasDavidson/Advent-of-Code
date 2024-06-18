@@ -95,7 +95,7 @@ impl Module {
 }
 
 fn main() {
-    let input = include_str!("../example.txt");
+    let input = include_str!("../imput.txt");
 
 
     let mut modules: HashMap<String, Module> = HashMap::new();
@@ -104,7 +104,6 @@ fn main() {
         let module = Module::from_string(line);
         let label = module.label.clone();
         modules.insert(label, module);
-        // println!("{} -{:?}> {:?}", module.label, module.module_type, module.destinations);
     }
 
     let mut machine: Vec<_> = input.lines().map(|line| Module::from_string(line)).collect();
@@ -132,22 +131,17 @@ fn main() {
 
     while let Some((module_label, signal)) = signals.pop_front() {
         let Some(module_index) = machine.iter().position(|module| module.label == module_label) else {
-            panic!("Invalid label");
+            continue;
         };
-        // println!("{}, index: {}", module_label, module_index);
         let Some(module) = machine.get_mut(module_index) else {
-            panic!("Invalid label");
-        };
-
-        let Some(new_signal) = module.module_type.handle_pulse(&module_label, &signal) else {
-            // println!("Skip {}", module_label);
             continue;
         };
 
-        // println!("{:?}", module);
+        let Some(new_signal) = module.module_type.handle_pulse(&module_label, &signal) else {
+            continue;
+        };
 
         for destination in &module.destinations {
-            println!("{} -{:?}> {}", module_label, new_signal, destination);
             signals.push_back((destination.to_string(), new_signal));
         }
     }

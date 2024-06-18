@@ -342,7 +342,7 @@ fn part_2(workflows: &Vec<Workflow>) -> usize {
 }
 
 fn main() {
-    let input = include_str!("../input.txt");
+    let input = include_str!("../example2.txt");
 
     let Some((workflows_str, ratings_str)) = input.split_once("\r\n\r\n") else {
         panic!("Invalid input");
