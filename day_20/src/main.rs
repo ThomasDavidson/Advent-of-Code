@@ -95,7 +95,7 @@ impl Module {
 }
 
 fn main() {
-    let input = include_str!("../imput.txt");
+    let input = include_str!("../example2.txt");
 
 
     let mut modules: HashMap<String, Module> = HashMap::new();
@@ -129,7 +129,15 @@ fn main() {
 
     let mut signals = VecDeque::from([("broadcaster".to_string(), Low)]);
 
+    let mut low_pulses: usize = 0;
+    let mut high_pulses: usize = 0;
+
     while let Some((module_label, signal)) = signals.pop_front() {
+        match signal {
+            Low => low_pulses += 1,
+            High => high_pulses += 1,
+        }
+
         let Some(module_index) = machine.iter().position(|module| module.label == module_label) else {
             continue;
         };
@@ -145,4 +153,5 @@ fn main() {
             signals.push_back((destination.to_string(), new_signal));
         }
     }
+    println!("High: {} Low: {}", high_pulses, low_pulses);
 }
