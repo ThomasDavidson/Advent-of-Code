@@ -1,5 +1,5 @@
 use std::collections::{HashMap, VecDeque};
-use std::ops::{Not};
+use std::ops::{Not, Rem};
 use crate::ModuleType::{Broadcast, Conjunction, FlipFlop};
 use crate::SignalLevel::{High, Low};
 
@@ -40,7 +40,11 @@ impl ModuleType {
             ,
             Conjunction(inputs) => {
                 // println!("Conjunction: {:?}", inputs);
-                let input_pos = inputs.partition_point(|input| input.0.as_str() == label);
+                let Some(input_pos) = inputs.iter().position(|input| input.0.as_str() == label) else {
+                    panic!("Not found: {}", label);
+                };
+                // .partition_point(|input| input.0.as_str() == label);
+
                 let Some(input) = inputs.get_mut(input_pos)else {
                     panic!("Conjunction called from not connected module");
                 };
@@ -48,9 +52,9 @@ impl ModuleType {
 
                 // println!("Conjunction: {:?}", inputs);
 
-                match inputs.iter().all(|input| input.1 == Low) {
-                    true => Some(High),
-                    false => Some(Low),
+                match inputs.iter().all(|input| input.1 == High) {
+                    true => Some(Low),
+                    false => Some(High),
                 }
             }
             Broadcast => Some(*signal_level),
@@ -95,7 +99,7 @@ impl Module {
 }
 
 fn main() {
-    let input = include_str!("../example2.txt");
+    let input = include_str!("../input.txt");
 
 
     let mut modules: HashMap<String, Module> = HashMap::new();
@@ -127,31 +131,40 @@ fn main() {
 
     println!();
 
-    let mut signals = VecDeque::from([("broadcaster".to_string(), Low)]);
+    let mut signals: VecDeque<(String, String, SignalLevel)> = VecDeque::new(); //VecDeque::from([("broadcaster".to_string(), Low)]);
 
     let mut low_pulses: usize = 0;
     let mut high_pulses: usize = 0;
 
-    while let Some((module_label, signal)) = signals.pop_front() {
-        match signal {
-            Low => low_pulses += 1,
-            High => high_pulses += 1,
-        }
+    for i in 0..1000 {
+        signals.push_front(("button".to_string(), "broadcaster".to_string(), Low));
 
-        let Some(module_index) = machine.iter().position(|module| module.label == module_label) else {
-            continue;
-        };
-        let Some(module) = machine.get_mut(module_index) else {
-            continue;
-        };
 
-        let Some(new_signal) = module.module_type.handle_pulse(&module_label, &signal) else {
-            continue;
-        };
+        while let Some((source, module_label, signal)) = signals.pop_front() {
+            match signal {
+                Low => low_pulses += 1,
+                High => high_pulses += 1,
+            }
 
-        for destination in &module.destinations {
-            signals.push_back((destination.to_string(), new_signal));
+            let Some(module_index) = machine.iter().position(|module| module.label == module_label) else {
+                continue;
+            };
+            let Some(module) = machine.get_mut(module_index) else {
+                continue;
+            };
+
+            let Some(new_signal) = module.module_type.handle_pulse(&source, &signal) else {
+                continue;
+            };
+
+            for destination in &module.destinations {
+                // println!("{} -{:?}-> {}", module_label, new_signal, destination);
+                signals.push_back((module_label.to_string(), destination.to_string(), new_signal));
+            }
         }
     }
     println!("High: {} Low: {}", high_pulses, low_pulses);
+
+    let part_1_answer = high_pulses * low_pulses;
+    println!("Part 1 answer: {}", part_1_answer);
 }
