@@ -1,5 +1,6 @@
 use std::collections::{HashMap, VecDeque};
-use std::ops::{Not, Rem};
+use std::ops::Not;
+use std::time::Instant;
 use crate::ModuleType::{Broadcast, Conjunction, FlipFlop};
 use crate::SignalLevel::{High, Low};
 
@@ -98,38 +99,45 @@ impl Module {
     }
 }
 
+struct Machine {
+    modules: HashMap<String, Module>,
+}
+
+impl Machine {
+    fn from_string(input: &str) -> Self {
+        let mut machine: Vec<_> = input.lines().map(|line| Module::from_string(line)).collect();
+
+        let machine_clone = machine.clone();
+
+        // allow conjunction modules to track each input
+        for module in machine.iter_mut() {
+            let module_type = match &mut module.module_type {
+                Conjunction(t) => t,
+                _ => continue,
+            };
+            for p_module in machine_clone.iter().filter(|f_module| f_module.destinations.contains(&module.label)) {
+                module_type.push((p_module.label.clone(), Low));
+            }
+        }
+
+        let mut modules: HashMap<String, Module> = HashMap::new();
+
+        for module in machine.into_iter() {
+            modules.insert(module.label.clone(), module);
+        }
+
+        Machine {
+            modules
+        }
+    }
+}
+
 fn main() {
     let input = include_str!("../input.txt");
 
+    let start: Instant = Instant::now();
 
-    let mut modules: HashMap<String, Module> = HashMap::new();
-
-    for line in input.lines() {
-        let module = Module::from_string(line);
-        let label = module.label.clone();
-        modules.insert(label, module);
-    }
-
-    let mut machine: Vec<_> = input.lines().map(|line| Module::from_string(line)).collect();
-
-    let machine_clone = machine.clone();
-
-    // allow conjunction modules to track each input
-    for module in machine.iter_mut() {
-        let module_type = match &mut module.module_type {
-            Conjunction(t) => t,
-            _ => continue,
-        };
-        for p_module in machine_clone.iter().filter(|f_module| f_module.destinations.contains(&module.label)) {
-            module_type.push((p_module.label.clone(), Low));
-        }
-    }
-
-    for module in &machine {
-        println!("{:?}", module);
-    }
-
-    println!();
+    let mut machine = Machine::from_string(input);
 
     let mut signals: VecDeque<(String, String, SignalLevel)> = VecDeque::new(); //VecDeque::from([("broadcaster".to_string(), Low)]);
 
@@ -139,17 +147,13 @@ fn main() {
     for i in 0..1000 {
         signals.push_front(("button".to_string(), "broadcaster".to_string(), Low));
 
-
         while let Some((source, module_label, signal)) = signals.pop_front() {
             match signal {
                 Low => low_pulses += 1,
                 High => high_pulses += 1,
             }
 
-            let Some(module_index) = machine.iter().position(|module| module.label == module_label) else {
-                continue;
-            };
-            let Some(module) = machine.get_mut(module_index) else {
+            let Some(module) = machine.modules.get_mut(&module_label) else {
                 continue;
             };
 
@@ -163,8 +167,8 @@ fn main() {
             }
         }
     }
-    println!("High: {} Low: {}", high_pulses, low_pulses);
 
     let part_1_answer = high_pulses * low_pulses;
-    println!("Part 1 answer: {}", part_1_answer);
+    let duration = start.elapsed();
+    println!("Part 1 answer: {part_1_answer}, time: {:?}", duration);
 }
