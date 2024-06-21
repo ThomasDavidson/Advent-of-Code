@@ -1,5 +1,5 @@
 use std::collections::{HashMap, VecDeque};
-use std::ops::Not;
+use std::ops::{Not, Rem};
 use std::time::Instant;
 use crate::ModuleType::{Broadcast, Conjunction, FlipFlop};
 use crate::SignalLevel::{High, Low};
@@ -40,18 +40,15 @@ impl ModuleType {
                 }
             ,
             Conjunction(inputs) => {
-                // println!("Conjunction: {:?}", inputs);
                 let Some(input_pos) = inputs.iter().position(|input| input.0.as_str() == label) else {
                     panic!("Not found: {}", label);
                 };
-                // .partition_point(|input| input.0.as_str() == label);
 
                 let Some(input) = inputs.get_mut(input_pos)else {
                     panic!("Conjunction called from not connected module");
                 };
                 input.1 = *signal_level;
 
-                // println!("Conjunction: {:?}", inputs);
 
                 match inputs.iter().all(|input| input.1 == High) {
                     true => Some(Low),
@@ -99,6 +96,12 @@ impl Module {
     }
 }
 
+enum EndCondition {
+    ButtonPresses(u64),
+    ModuleReceiveLowSignal(String),
+}
+
+#[derive(Clone)]
 struct Machine {
     modules: HashMap<String, Module>,
 }
@@ -130,45 +133,89 @@ impl Machine {
             modules
         }
     }
+    fn press_button(&mut self, condition: EndCondition) -> (u64, u64) {
+        let mut signals: VecDeque<(String, String, SignalLevel)> = VecDeque::new();
+
+        let mut low_pulses: u64 = 0;
+        let mut high_pulses: u64 = 0;
+
+        let mut button_presses: u64 = 0;
+        loop {
+            if button_presses.rem(1000000) == 0 {
+                println!("{}", button_presses);
+            }
+
+            button_presses += 1;
+            match condition {
+                EndCondition::ButtonPresses(max_presses) => if button_presses > max_presses {
+                    break;
+                }
+                _ => ()
+            }
+
+            signals.push_front(("button".to_string(), "broadcaster".to_string(), Low));
+
+            while let Some((source, module_label, signal)) = signals.pop_front() {
+                match condition {
+                    EndCondition::ModuleReceiveLowSignal(ref label) => if label == module_label.as_str() && signal == Low {
+                        return (button_presses, 0);
+                    }
+                    _ => ()
+                }
+
+                match signal {
+                    Low => low_pulses += 1,
+                    High => high_pulses += 1,
+                }
+
+                let Some(module) = self.modules.get_mut(&module_label) else {
+                    continue;
+                };
+
+
+                let Some(new_signal) = module.module_type.handle_pulse(&source, &signal) else {
+                    continue;
+                };
+
+
+                for destination in &module.destinations {
+                    if destination == "dd" {
+                        println!("{} -{:?}> {}: {:?}", source, signal, module_label, module);
+                    }
+                    signals.push_back((module_label.to_string(), destination.to_string(), new_signal));
+                }
+            }
+        }
+
+        (low_pulses, high_pulses)
+    }
+}
+
+fn part_1(mut machine: Machine) -> u64 {
+    let (low_pulses, high_pulses) = machine.press_button(EndCondition::ButtonPresses(10000));
+
+    high_pulses * low_pulses
+}
+
+fn part_2(mut machine: Machine) -> u64 {
+    let (presses, _) = machine.press_button(EndCondition::ModuleReceiveLowSignal("rx".to_string()));
+
+    presses
 }
 
 fn main() {
     let input = include_str!("../input.txt");
 
+
+    let machine = Machine::from_string(input);
+
     let start: Instant = Instant::now();
-
-    let mut machine = Machine::from_string(input);
-
-    let mut signals: VecDeque<(String, String, SignalLevel)> = VecDeque::new(); //VecDeque::from([("broadcaster".to_string(), Low)]);
-
-    let mut low_pulses: usize = 0;
-    let mut high_pulses: usize = 0;
-
-    for i in 0..1000 {
-        signals.push_front(("button".to_string(), "broadcaster".to_string(), Low));
-
-        while let Some((source, module_label, signal)) = signals.pop_front() {
-            match signal {
-                Low => low_pulses += 1,
-                High => high_pulses += 1,
-            }
-
-            let Some(module) = machine.modules.get_mut(&module_label) else {
-                continue;
-            };
-
-            let Some(new_signal) = module.module_type.handle_pulse(&source, &signal) else {
-                continue;
-            };
-
-            for destination in &module.destinations {
-                // println!("{} -{:?}-> {}", module_label, new_signal, destination);
-                signals.push_back((module_label.to_string(), destination.to_string(), new_signal));
-            }
-        }
-    }
-
-    let part_1_answer = high_pulses * low_pulses;
+    let part_1_answer = part_1(machine.clone());
     let duration = start.elapsed();
     println!("Part 1 answer: {part_1_answer}, time: {:?}", duration);
+
+    // let start: Instant = Instant::now();
+    // let part_2_answer = part_2(machine);
+    // let duration = start.elapsed();
+    // println!("Part 2 answer: {part_2_answer}, time: {:?}", duration);
 }
