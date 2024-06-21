@@ -1,8 +1,9 @@
 use std::collections::{HashMap, VecDeque};
-use std::ops::{Not, Rem};
+use std::ops::Not;
 use std::time::Instant;
 use crate::ModuleType::{Broadcast, Conjunction, FlipFlop};
 use crate::SignalLevel::{High, Low};
+use library::math::lcm;
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
 enum SignalLevel {
@@ -28,7 +29,7 @@ enum ModuleType {
 }
 
 impl ModuleType {
-    fn handle_pulse(&mut self, label: &String, signal_level: &SignalLevel) -> Option<SignalLevel> {
+    fn handle_pulse(&mut self, label: &str, signal_level: &SignalLevel) -> Option<SignalLevel> {
         match self {
             FlipFlop(state) =>
                 match signal_level {
@@ -98,7 +99,7 @@ impl Module {
 
 enum EndCondition {
     ButtonPresses(u64),
-    ModuleReceiveLowSignal(String),
+    ModuleReceiveSignal(String, SignalLevel),
 }
 
 #[derive(Clone)]
@@ -141,10 +142,6 @@ impl Machine {
 
         let mut button_presses: u64 = 0;
         loop {
-            if button_presses.rem(1000000) == 0 {
-                println!("{}", button_presses);
-            }
-
             button_presses += 1;
             match condition {
                 EndCondition::ButtonPresses(max_presses) => if button_presses > max_presses {
@@ -156,13 +153,6 @@ impl Machine {
             signals.push_front(("button".to_string(), "broadcaster".to_string(), Low));
 
             while let Some((source, module_label, signal)) = signals.pop_front() {
-                match condition {
-                    EndCondition::ModuleReceiveLowSignal(ref label) => if label == module_label.as_str() && signal == Low {
-                        return (button_presses, 0);
-                    }
-                    _ => ()
-                }
-
                 match signal {
                     Low => low_pulses += 1,
                     High => high_pulses += 1,
@@ -177,11 +167,19 @@ impl Machine {
                     continue;
                 };
 
+                match condition {
+                    EndCondition::ModuleReceiveSignal(ref label, cond_signal) => {
+                        if module_label == label.as_str() {
+                            if new_signal == cond_signal {
+                                return (button_presses, 0);
+                            }
+                        }
+                    }
+                    _ => ()
+                }
+
 
                 for destination in &module.destinations {
-                    if destination == "dd" {
-                        println!("{} -{:?}> {}: {:?}", source, signal, module_label, module);
-                    }
                     signals.push_back((module_label.to_string(), destination.to_string(), new_signal));
                 }
             }
@@ -192,16 +190,48 @@ impl Machine {
 }
 
 fn part_1(mut machine: Machine) -> u64 {
-    let (low_pulses, high_pulses) = machine.press_button(EndCondition::ButtonPresses(10000));
+    let (low_pulses, high_pulses) = machine.press_button(EndCondition::ButtonPresses(1000));
 
     high_pulses * low_pulses
 }
 
-fn part_2(mut machine: Machine) -> u64 {
-    let (presses, _) = machine.press_button(EndCondition::ModuleReceiveLowSignal("rx".to_string()));
+fn part_2(machine: Machine) -> u64 {
+    let Some(broadcaster) = machine.modules.get("broadcaster")else { panic!("Can't find broadcaster") };
 
-    presses
+    let mut partial_answers: Vec<u64> = Vec::new();
+
+    for destination in broadcaster.destinations.iter() {
+        let Some(conj_label) = find_conjecture(&machine, destination) else { panic!("Cannot find conjecture"); };
+        let part_answer = machine.clone().press_button(EndCondition::ModuleReceiveSignal(conj_label, Low));
+        partial_answers.push(part_answer.0);
+    }
+
+    let mut part_2_answer = partial_answers.pop().unwrap();
+
+    for partial_answer in partial_answers {
+        part_2_answer = lcm(part_2_answer, partial_answer)
+    }
+    part_2_answer
 }
+
+fn find_conjecture(machine: &Machine, module_label: &str) -> Option<String> {
+    let Some(module) = machine.modules.get(module_label) else {
+        panic!("Cannot find module");
+    };
+    match module.module_type {
+        Conjunction(_) => return Some(module_label.to_string()),
+        _ => (),
+    }
+    for destination in module.destinations.iter() {
+        match find_conjecture(machine, destination) {
+            None => (),
+            Some(label) => return Some(label),
+        }
+    }
+
+    None
+}
+
 
 fn main() {
     let input = include_str!("../input.txt");
@@ -214,8 +244,9 @@ fn main() {
     let duration = start.elapsed();
     println!("Part 1 answer: {part_1_answer}, time: {:?}", duration);
 
-    // let start: Instant = Instant::now();
-    // let part_2_answer = part_2(machine);
-    // let duration = start.elapsed();
-    // println!("Part 2 answer: {part_2_answer}, time: {:?}", duration);
+
+    let start: Instant = Instant::now();
+    let part_2_answer = part_2(machine);
+    let duration = start.elapsed();
+    println!("Part 2 answer: {:?}, time: {:?}", part_2_answer, duration);
 }

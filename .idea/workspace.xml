@@ -8,13 +8,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9c5a21ff-c733-4389-80e7-683670793d71" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/library/src/math/mod.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/day_20/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/day_20/Cargo.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/day_20/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/day_20/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/library/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/library/src/lib.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Rust File" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -451,7 +461,7 @@
       <workItem from="1718659313490" duration="14497000" />
       <workItem from="1718685378468" duration="33501000" />
       <workItem from="1718843132918" duration="1051000" />
-      <workItem from="1718894932529" duration="2151000" />
+      <workItem from="1718894932529" duration="15301000" />
     </task>
     <servers />
   </component>
