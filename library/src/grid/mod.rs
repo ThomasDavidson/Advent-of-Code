@@ -3,7 +3,7 @@ pub enum DirectionFilter {
     Forward,
     Turn,
     Stop,
-    Backwords,
+    Backwards,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -76,7 +76,7 @@ impl Direction {
         if filters.contains(&DirectionFilter::Stop) {
             ret.push(Direction::None);
         }
-        if filters.contains(&DirectionFilter::Backwords) {
+        if filters.contains(&DirectionFilter::Backwards) {
             ret.push(self.inverse());
         }
         ret

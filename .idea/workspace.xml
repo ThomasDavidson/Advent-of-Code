@@ -8,11 +8,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9c5a21ff-c733-4389-80e7-683670793d71" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/library/src/math/mod.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/day_20/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/day_20/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/day_20/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/day_20/src/main.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/library/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/library/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/day_19/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/day_19/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/day_21/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/day_21/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/library/src/grid/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/library/src/grid/mod.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -43,28 +43,29 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Cargo.Run day_16.executor&quot;: &quot;Run&quot;,
-    &quot;Cargo.Run day_20.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.rust.reset.selective.auto.import&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/1davi/Documents/VS_Code/AdventOfCode/Advent-of-Code-2023&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;org.rust.cargo.project.model.PROJECT_DISCOVERY&quot;: &quot;true&quot;,
-    &quot;org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon&quot;: &quot;&quot;,
-    &quot;org.rust.first.attach.projects&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Cargo.Run day_16.executor": "Run",
+    "Cargo.Run day_20.executor": "Run",
+    "Cargo.Run day_21.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.rust.reset.selective.auto.import": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "C:/Users/1davi/Documents/VS_Code/AdventOfCode/Advent-of-Code-2023",
+    "node.js.detected.package.eslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
+    "org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon": "",
+    "org.rust.first.attach.projects": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\1davi\Documents\VS_Code\AdventOfCode\Advent-of-Code-2023\day_20" />
     </key>
   </component>
-  <component name="RunManager" selected="Cargo.Run day_20">
+  <component name="RunManager" selected="Cargo.Run day_21">
     <configuration name="Run day_1" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="command" value="run --package day_1 --bin day_1" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -286,6 +287,23 @@
         <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
       </method>
     </configuration>
+    <configuration name="Run day_21" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
+      <option name="command" value="run --package day_21 --bin day_21 --release" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <envs />
+      <option name="emulateTerminal" value="true" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="withSudo" value="false" />
+      <option name="buildTarget" value="REMOTE" />
+      <option name="backtrace" value="SHORT" />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="Run day_3" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="command" value="run --package day_3 --bin day_3" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -443,6 +461,7 @@
       <item itemvalue="Cargo.Run day_18" />
       <item itemvalue="Cargo.Run day_19" />
       <item itemvalue="Cargo.Run day_20" />
+      <item itemvalue="Cargo.Run day_21" />
       <item itemvalue="Cargo.Test Advent-of-Code-2023" />
     </list>
   </component>
@@ -461,7 +480,7 @@
       <workItem from="1718659313490" duration="14497000" />
       <workItem from="1718685378468" duration="33501000" />
       <workItem from="1718843132918" duration="1051000" />
-      <workItem from="1718894932529" duration="15301000" />
+      <workItem from="1718894932529" duration="19245000" />
     </task>
     <servers />
   </component>
