@@ -9,8 +9,6 @@
   <component name="ChangeListManager">
     <list default="true" id="9c5a21ff-c733-4389-80e7-683670793d71" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/day_19/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/day_19/src/main.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/day_21/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/day_21/src/main.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/library/src/grid/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/library/src/grid/mod.rs" afterDir="false" />
     </list>
@@ -45,12 +43,14 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Cargo.Run day_14.executor": "Run",
     "Cargo.Run day_16.executor": "Run",
     "Cargo.Run day_20.executor": "Run",
     "Cargo.Run day_21.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.rust.reset.selective.auto.import": "true",
     "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
     "last_opened_file_path": "C:/Users/1davi/Documents/VS_Code/AdventOfCode/Advent-of-Code-2023",
     "node.js.detected.package.eslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -65,7 +65,7 @@
       <recent name="C:\Users\1davi\Documents\VS_Code\AdventOfCode\Advent-of-Code-2023\day_20" />
     </key>
   </component>
-  <component name="RunManager" selected="Cargo.Run day_21">
+  <component name="RunManager" selected="Cargo.Run day_14">
     <configuration name="Run day_1" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="command" value="run --package day_1 --bin day_1" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
@@ -480,7 +480,10 @@
       <workItem from="1718659313490" duration="14497000" />
       <workItem from="1718685378468" duration="33501000" />
       <workItem from="1718843132918" duration="1051000" />
-      <workItem from="1718894932529" duration="19245000" />
+      <workItem from="1718894932529" duration="20076000" />
+      <workItem from="1719015961257" duration="1254000" />
+      <workItem from="1720212944182" duration="3010000" />
+      <workItem from="1720378699745" duration="3092000" />
     </task>
     <servers />
   </component>

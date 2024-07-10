@@ -1,3 +1,4 @@
+use library::grid::{Direction, GridState};
 use crate::Tile::{GardenPlot, Rocks, Start};
 
 #[derive(Debug, Eq, PartialEq)]
@@ -50,5 +51,30 @@ fn main() {
 
     let garden = Garden::from_string(input);
 
-    println!("Start: {:?}", garden.find_start());
+    let (x, y) = garden.find_start();
+    println!("Start: {}, {}", x, y);
+    let (width, height) = (garden.grid[0].len(), garden.grid.len());
+
+    let directions = Direction::ALL.to_vec();
+
+    for direction in directions {
+        let (x_offset, y_offset) = direction.get_translation();
+        let (next_x, next_y) = ((x as i16 + x_offset) as usize, (y as i16 + y_offset) as usize);
+
+        let grid_state = GridState {
+            direction,
+            x: next_x,
+            y: next_y,
+        };
+
+        if !grid_state.check_bounds(width, height) {
+            continue;
+        }
+        let next_tile = &garden.grid[next_x][next_y];
+
+        if *next_tile == Rocks {
+            continue;
+        }
+        println!("Next: {}, {}: {:?}", grid_state.x, grid_state.y, next_tile);
+    }
 }

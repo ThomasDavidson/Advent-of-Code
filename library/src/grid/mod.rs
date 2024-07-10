@@ -14,6 +14,7 @@ pub enum Direction {
     South,
     West,
 }
+
 impl Direction {
     pub const fn to_char(&self) -> char {
         match self {
@@ -72,7 +73,8 @@ impl Direction {
         }
         if filters.contains(&DirectionFilter::Turn) {
             ret.push(self.left());
-            ret.push(self.right());        }
+            ret.push(self.right());
+        }
         if filters.contains(&DirectionFilter::Stop) {
             ret.push(Direction::None);
         }
@@ -89,6 +91,7 @@ pub struct GridState {
     pub x: usize,
     pub y: usize,
 }
+
 impl GridState {
     pub const fn check_bounds(&self, width: usize, height: usize) -> bool {
         match self.direction {
