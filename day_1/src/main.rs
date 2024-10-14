@@ -55,28 +55,20 @@ fn get_word_from_line(line: &str, parse_str_num: bool) -> Result<i32, ParseIntEr
 fn main() -> std::io::Result<()> {
     let input = include_str!("../input.txt");
 
-    let mut lines: Vec<&str> = input.lines().collect();
+    let lines: Vec<&str> = input.lines().collect();
 
-    let mut count: i32 = 0;
+    let count = lines
+        .iter()
+        .map(|line| get_word_from_line(line, false).unwrap())
+        .fold(0, |acc, x| acc + x);
 
-    for line in lines {
-        let result: Result<i32, _> = get_word_from_line(line, false);
-        match result {
-            Ok(v) => count += v,
-            Err(e) => panic!("{:?}\n", e.kind()),
-        }
-    }
     println!("Day 1 result: {}", count);
 
-    lines = input.lines().collect();
-    count = 0;
-    for line in lines {
-        let result: Result<i32, _> = get_word_from_line(line, true);
-        match result {
-            Ok(v) => count += v,
-            Err(e) => panic!("{:?}\n", e.kind()),
-        }
-    }
+    let count = lines
+        .iter()
+        .map(|line| get_word_from_line(line, true).unwrap())
+        .fold(0, |acc, x| acc + x);
+
     println!("Day 2 result: {}", count);
 
     Ok(())
