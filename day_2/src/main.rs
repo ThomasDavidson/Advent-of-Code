@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::time::Instant;
 
 #[derive(Debug)]
 struct Game {
@@ -62,15 +63,16 @@ fn main() -> std::io::Result<()> {
 
     let lines: Vec<&str> = input.lines().collect();
 
-
     let game = Game {
         red: 12,
         green: 13,
         blue: 14,
     };
 
-    let mut day_1_count: i32 = 0;
-    let mut day_2_count: i32 = 0;
+    let mut part_1_count: i32 = 0;
+    let mut part_2_count: i32 = 0;
+
+    let start: Instant = Instant::now();
 
     for line in lines {
         let game_id = get_regex_from_str(line, "Game ([0-9]{1,})");
@@ -78,19 +80,16 @@ fn main() -> std::io::Result<()> {
         let result = check_game(&game, &max_game);
 
         if result {
-            day_1_count += game_id;
+            part_1_count += game_id;
         }
-        day_2_count += max_game.red * max_game.green * max_game.blue;
-        println!(
-            "Id: {}, day_1_count: {}, day_2_count {}, day_2_add {}, result: {}, color: {:?}",
-            game_id,
-            day_1_count,
-            day_2_count,
-            max_game.red * max_game.green * max_game.blue,
-            result,
-            max_game
-        );
+        part_2_count += max_game.red * max_game.green * max_game.blue;
     }
+    let duration = start.elapsed();
+    println!("Time: {:?}", duration);
+
+    println!("part 1 result: {}", part_1_count);
+
+    println!("part 2 result: {}", part_2_count);
 
     Ok(())
 }
