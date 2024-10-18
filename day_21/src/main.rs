@@ -74,16 +74,24 @@ impl Garden {
         self.grid.len()
     }
 
+    fn visited(&self, elf: &Elf) -> bool {
+        let (x, y) = elf.coords;
+        // checks if spot has been visited before with fewer steps
+        self.steps[x][y] <= elf.steps
+    }
+
+    fn visit(&mut self, elf: &Elf) {
+        let (x, y) = elf.coords;
+        self.steps[x][y] = elf.steps;
+    }
+    fn get_step_coords(&self) -> impl Iterator<Item = &u16> {
+        self.steps.iter().flatten()
+    }
+
     fn find_next(&mut self, elf: Elf) -> VecDeque<Elf> {
         let width = self.width();
         let height = self.height();
         let (x, y) = elf.coords;
-
-        if self.steps[x][y] <= elf.steps {
-            return VecDeque::new();
-        }
-
-        self.steps[x][y] = elf.steps;
 
         if elf.steps == elf.max_steps {
             return VecDeque::new();
@@ -112,15 +120,15 @@ impl Garden {
                 continue;
             }
 
-            if self.steps[next_x][next_y] < elf.steps {
-                continue;
-            }
-
             let new_elf = Elf {
                 coords: (next_x, next_y),
                 steps: elf.steps + 1,
                 ..elf
             };
+
+            if self.visited(&new_elf) {
+                continue;
+            }
 
             coords.push_front(new_elf);
         }
@@ -146,14 +154,17 @@ fn part_1(input: &str) -> i32 {
     let mut gardeners = VecDeque::from([gardener]);
 
     while let Some(gardener) = gardeners.pop_front() {
+        if garden.visited(&gardener) {
+            continue;
+        }
+
+        garden.visit(&gardener);
         let mut next = garden.find_next(gardener);
         gardeners.append(&mut next);
     }
 
     garden
-        .steps
-        .iter()
-        .flatten()
+        .get_step_coords()
         .map(|step| {
             // check if visited from step count
             if step % 2 == 0 && *step != Garden::DEFAULT_STEP {
