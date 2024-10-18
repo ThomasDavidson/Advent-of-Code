@@ -23,10 +23,9 @@ fn get_day_1_score(num_match: u32) -> usize {
 
 fn main() {
     let input = include_str!("../input.txt");
-    let mut day_1_answer: usize = 0;
+    let mut part_1_answer: usize = 0;
 
     let mut card_count: Vec<usize> = vec![1; input.lines().count()];
-    // println!("init vec: {:?}", card_count);
 
     for (i, line) in input.lines().enumerate() {
         let cards: &str = match line.split(":").nth(1) {
@@ -51,10 +50,8 @@ fn main() {
 
         let matching_numbers = winning_numbers.intersection(&your_numbers).count();
 
-        // print!("{}, ", matching_numbers);
-
         if matching_numbers > 0 {
-            day_1_answer = day_1_answer + get_day_1_score(matching_numbers as u32);
+            part_1_answer = part_1_answer + get_day_1_score(matching_numbers as u32);
         }
 
         let card_dup = match card_count.get(i) {
@@ -69,12 +66,10 @@ fn main() {
                 None => card_count.push(1),
             };
         }
-        // println!("test: {:?}", card_count);
     }
-    println!("");
-    println!("day_1_answer: {}", day_1_answer);
+    println!("day 4");
+    println!("part 1 answer: {}", part_1_answer);
 
-    // println!("day_2_cards: {:?}", card_count);
-    let day_2_answer: usize = card_count.iter().sum();
-    println!("day_2_answer: {:?}", day_2_answer);
+    let part_2_answer: usize = card_count.iter().sum();
+    println!("part 2 answer: {:?}", part_2_answer);
 }
