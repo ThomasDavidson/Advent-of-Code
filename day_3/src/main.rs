@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 fn has_special_char(compare_top: &str, start_cmp_val: usize, end_value: usize) -> bool {
     let compare_top_section = compare_top.get(start_cmp_val..end_value);
 
@@ -186,10 +188,7 @@ fn combine_letters_to_numbers(lines: Vec<&str>, mut number_coords: Vec<Coord>) -
     let mut string: String = Default::default();
     let mut last_coord = Coord { x: 0, y: 0 };
 
-    // println!("number_coords: {}", number_coords.len());
-
     number_coords.sort();
-    // println!("number_coords: {:?}", number_coords);
 
     for number_coord in number_coords {
         if last_coord.y != number_coord.y || last_coord.x + 1 != number_coord.x {
@@ -204,7 +203,6 @@ fn combine_letters_to_numbers(lines: Vec<&str>, mut number_coords: Vec<Coord>) -
         let line = lines[number_coord.y];
         let letter = line.as_bytes()[number_coord.x];
         string.push(letter as char);
-        // println!("String: {} Char: {}", string, letter as char);
 
         last_coord = number_coord;
     }
@@ -219,12 +217,11 @@ fn combine_letters_to_numbers(lines: Vec<&str>, mut number_coords: Vec<Coord>) -
     ret
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
+fn part_1(input: &str) -> i32 {
+    first_try_day_1(input.lines().collect())
+}
 
-    let day_1_result: i32 = first_try_day_1(input.lines().collect());
-    println!("Day 1 result: {}", day_1_result);
-
+fn part_2(input: &str) -> i32 {
     let str_in = input.to_string();
 
     let lines: Vec<&str> = str_in.lines().collect();
@@ -262,20 +259,27 @@ fn main() {
                 askii_coords.append(&mut res.clone());
 
                 let gear_ratoios = combine_letters_to_numbers(lines.clone(), res.clone());
-                // println!("{:?}", gear_ratoios);
                 if gear_ratoios.len() == 2 {
-                    // println!("adding: {}", gear_ratoios[0] * gear_ratoios[1]);
                     day_2_result += gear_ratoios[0] * gear_ratoios[1];
                 }
             }
         }
     }
-    println!("day_2_result: {}", day_2_result);
-    // println!("askii_coords: {:?}", askii_coords);
-    askii_coords.sort();
-    // println!("askii_coords: {:?}", askii_coords);
+    day_2_result
+}
 
-    debug_print(height, width, checked_coords, askii_coords);
+fn main() {
+    let input = include_str!("../input.txt");
+
+    let start: Instant = Instant::now();
+    let part_1_answer = part_1(input);
+    let duration = start.elapsed();
+    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
+
+    let start: Instant = Instant::now();
+    let part_2_answer = part_2(input);
+    let duration = start.elapsed();
+    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
 }
 
 #[cfg(test)]
