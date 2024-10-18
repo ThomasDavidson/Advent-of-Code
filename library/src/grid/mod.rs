@@ -65,6 +65,12 @@ impl Direction {
         Direction::West,
         Direction::None,
     ];
+    pub const MOVE: [Direction; 4] = [
+        Direction::North,
+        Direction::East,
+        Direction::South,
+        Direction::West,
+    ];
     // should be constant
     pub fn next(&self, filters: Vec<DirectionFilter>) -> Vec<Direction> {
         let mut ret: Vec<Direction> = Vec::new();
