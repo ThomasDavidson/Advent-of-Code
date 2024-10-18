@@ -74,28 +74,24 @@ impl Garden {
         self.grid.len()
     }
 
-    fn find_next(
-        &mut self,
-        x: usize,
-        y: usize,
-        steps: u16,
-        max_steps: u16,
-    ) -> VecDeque<(usize, usize, u16)> {
+    fn find_next(&mut self, elf: Elf) -> VecDeque<Elf> {
         let width = self.width();
         let height = self.height();
+        let (x, y) = elf.coords;
 
-        if self.steps[x][y] <= steps {
+        if self.steps[x][y] <= elf.steps {
             return VecDeque::new();
         }
-        self.steps[x][y] = steps;
 
-        if steps == max_steps {
+        self.steps[x][y] = elf.steps;
+
+        if elf.steps == elf.max_steps {
             return VecDeque::new();
         }
 
         let directions = Direction::MOVE;
 
-        let mut coords: VecDeque<(usize, usize, u16)> = VecDeque::new();
+        let mut coords = VecDeque::new();
 
         for direction in directions {
             let grid_state = GridState { direction, x, y };
@@ -116,28 +112,42 @@ impl Garden {
                 continue;
             }
 
-            if self.steps[next_x][next_y] < steps {
+            if self.steps[next_x][next_y] < elf.steps {
                 continue;
             }
 
-            coords.push_front((next_x, next_y, steps + 1));
+            let new_elf = Elf {
+                coords: (next_x, next_y),
+                steps: elf.steps + 1,
+                ..elf
+            };
+
+            coords.push_front(new_elf);
         }
         coords
     }
 }
 
+struct Elf {
+    max_steps: u16,
+    steps: u16,
+    coords: (usize, usize),
+}
+
 fn part_1(input: &str) -> i32 {
     let mut garden = Garden::from_string(input);
 
-    let (start_x, start_y) = garden.find_start();
+    let gardener = Elf {
+        max_steps: 64,
+        steps: 0,
+        coords: garden.find_start(),
+    };
 
-    let mut coords: VecDeque<(usize, usize, u16)> = VecDeque::from([(start_x, start_y, 0)]);
+    let mut gardeners = VecDeque::from([gardener]);
 
-    let max_step = 64;
-
-    while let Some((x, y, steps)) = coords.pop_front() {
-        let mut next = garden.find_next(x, y, steps, max_step);
-        coords.append(&mut next);
+    while let Some(gardener) = gardeners.pop_front() {
+        let mut next = garden.find_next(gardener);
+        gardeners.append(&mut next);
     }
 
     garden
@@ -157,7 +167,6 @@ fn part_1(input: &str) -> i32 {
 
 fn main() {
     let input = include_str!("../input.txt");
-
 
     let start: Instant = Instant::now();
     let part_1_answer = part_1(&input);
