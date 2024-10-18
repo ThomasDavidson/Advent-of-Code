@@ -40,6 +40,8 @@ struct Garden {
 }
 
 impl Garden {
+    pub const DEFAULT_STEP: u16 = u16::MAX;
+
     fn from_string(input: &str) -> Self {
         let grid: Vec<Vec<Tile>> = input
             .lines()
@@ -49,7 +51,7 @@ impl Garden {
         // create grid with zero weight
         let steps: Vec<Vec<u16>> = grid
             .iter()
-            .map(|l| l.iter().map(|_| u16::MAX).collect())
+            .map(|l| l.iter().map(|_| Garden::DEFAULT_STEP).collect())
             .collect();
 
         Self { grid, steps }
@@ -124,42 +126,41 @@ impl Garden {
     }
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
-
+fn part_1(input: &str) -> i32 {
     let mut garden = Garden::from_string(input);
-    println!("height: {} width: {}", garden.height(), garden.width());
 
     let (start_x, start_y) = garden.find_start();
 
     let mut coords: VecDeque<(usize, usize, u16)> = VecDeque::from([(start_x, start_y, 0)]);
 
-    let max_step = 200;
+    let max_step = 64;
 
-    let start: Instant = Instant::now();
-    let mut n: u32 = 0;
     while let Some((x, y, steps)) = coords.pop_front() {
-        n += 1;
-        if n % 10000000 == 0 {
-            println!("{n} size: {}", coords.len());
-        }
         let mut next = garden.find_next(x, y, steps, max_step);
         coords.append(&mut next);
     }
-    let mut part_1_answer = 0;
 
-    for (y, line) in garden.grid.iter().enumerate() {
-        for (x, t) in line.iter().enumerate() {
-            if garden.steps[y][x] != u16::MAX && garden.steps[y][x] % 2 == 0 {
-                part_1_answer += 1;
-                // print!("O")
+    garden
+        .steps
+        .iter()
+        .flatten()
+        .map(|step| {
+            // check if visited from step count
+            if step % 2 == 0 && *step != Garden::DEFAULT_STEP {
+                1
             } else {
-                // print!("{}", t);
+                0
             }
-        }
-        // println!();
-    }
+        })
+        .fold(0, |acc, x| acc + x)
+}
 
+fn main() {
+    let input = include_str!("../input.txt");
+
+
+    let start: Instant = Instant::now();
+    let part_1_answer = part_1(&input);
     let duration = start.elapsed();
-    println!("Part 1 answer: {part_1_answer}, time: {:?}", duration);
+    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
 }
