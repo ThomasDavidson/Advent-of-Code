@@ -1,3 +1,4 @@
+use std::time::Instant;
 use std::num::ParseIntError;
 
 fn get_word_from_line(line: &str, parse_str_num: bool) -> Result<i32, ParseIntError> {
@@ -52,24 +53,37 @@ fn get_word_from_line(line: &str, parse_str_num: bool) -> Result<i32, ParseIntEr
     return result;
 }
 
+fn part_1(lines: &Vec<&str>) -> i32 {
+    lines
+        .iter()
+        .map(|line| get_word_from_line(line, false).unwrap())
+        .fold(0, |acc, x| acc + x)
+}
+
+fn part_2(lines: &Vec<&str>) -> i32 {
+    lines
+        .iter()
+        .map(|line| get_word_from_line(line, true).unwrap())
+        .fold(0, |acc, x| acc + x)
+}
+
 fn main() -> std::io::Result<()> {
     let input = include_str!("../input.txt");
 
     let lines: Vec<&str> = input.lines().collect();
 
-    let count = lines
-        .iter()
-        .map(|line| get_word_from_line(line, false).unwrap())
-        .fold(0, |acc, x| acc + x);
+    println!("Day 1");
 
-    println!("Day 1 result: {}", count);
+    let start: Instant = Instant::now();
+    let part_1_answer = part_1(&lines);
+    let duration = start.elapsed();
+    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
 
-    let count = lines
-        .iter()
-        .map(|line| get_word_from_line(line, true).unwrap())
-        .fold(0, |acc, x| acc + x);
-
-    println!("Day 2 result: {}", count);
+    
+    let start: Instant = Instant::now();
+    let part_2_answer = part_2(&lines);
+    let duration = start.elapsed();
+    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
 
     Ok(())
 }
