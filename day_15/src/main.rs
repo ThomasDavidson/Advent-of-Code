@@ -61,7 +61,6 @@ fn part_2(strings: &Vec<&str>) -> usize {
             }
             _ => panic!("Invalid instruction"),
         };
-
     }
     let mut day_2_answer = 0;
     for (i, box_) in boxes.iter().enumerate() {

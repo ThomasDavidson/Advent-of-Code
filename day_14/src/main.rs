@@ -138,7 +138,7 @@ fn part_2(input: &str) -> usize {
 
 fn main() {
     let input = include_str!("../input.txt");
-    
+
     let start: Instant = Instant::now();
     let part_1_answer = part_1(input);
     let duration = start.elapsed();

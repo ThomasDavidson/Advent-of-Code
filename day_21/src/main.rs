@@ -1,6 +1,6 @@
-use std::{collections::VecDeque, fmt, time::Instant};
 use crate::Tile::{GardenPlot, Rocks, Start};
 use library::grid::{Direction, GridState};
+use std::{collections::VecDeque, fmt, time::Instant};
 
 #[derive(Debug, Eq, PartialEq)]
 enum Tile {

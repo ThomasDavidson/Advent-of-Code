@@ -97,39 +97,39 @@ fn get_next_tile(
     current_symbol: char,
     current_location: Coord,
 ) -> Option<(Coord, Direction)> {
-        let current_dirs = get_tile_connections(&current_symbol);
+    let current_dirs = get_tile_connections(&current_symbol);
 
-        for dir in current_dirs {
-            // skip if visited previously
-            if back == dir {
+    for dir in current_dirs {
+        // skip if visited previously
+        if back == dir {
+            continue;
+        }
+        // skip if out of bounds
+        let next_coord = match check_direction(&lines, &current_location, &dir) {
+            None => {
                 continue;
             }
-            // skip if out of bounds
-            let next_coord = match check_direction(&lines, &current_location, &dir) {
-                None => {
-                    continue;
-                }
-                Some(a) => a,
-            };
+            Some(a) => a,
+        };
 
-            let next_tile = get_symbol(&lines, &next_coord);
+        let next_tile = get_symbol(&lines, &next_coord);
 
-            let next_dirs = get_tile_connections(&next_tile);
+        let next_dirs = get_tile_connections(&next_tile);
 
-            // switch direction
-            let required_dir = match dir {
-                Direction::North => Direction::South,
-                Direction::South => Direction::North,
-                Direction::East => Direction::West,
-                Direction::West => Direction::East,
-                Direction::None => panic!("Should not be None"),
-            };
-            // check if the next current_dirs has a pipe facing in this direction
-            if !next_dirs.contains(&required_dir) {
-                continue;
-            }
+        // switch direction
+        let required_dir = match dir {
+            Direction::North => Direction::South,
+            Direction::South => Direction::North,
+            Direction::East => Direction::West,
+            Direction::West => Direction::East,
+            Direction::None => panic!("Should not be None"),
+        };
+        // check if the next current_dirs has a pipe facing in this direction
+        if !next_dirs.contains(&required_dir) {
+            continue;
+        }
 
-            // sets to opposite of current_direction
+        // sets to opposite of current_direction
         return Some((next_coord, required_dir));
     }
     return None;

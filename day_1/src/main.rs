@@ -1,5 +1,5 @@
-use std::time::Instant;
 use std::num::ParseIntError;
+use std::time::Instant;
 
 fn get_word_from_line(line: &str, parse_str_num: bool) -> Result<i32, ParseIntError> {
     let letters: [&str; 9] = [
@@ -79,7 +79,6 @@ fn main() -> std::io::Result<()> {
     let duration = start.elapsed();
     println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
 
-    
     let start: Instant = Instant::now();
     let part_2_answer = part_2(&lines);
     let duration = start.elapsed();

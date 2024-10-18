@@ -1,7 +1,11 @@
 // Find GCD
 pub fn gcd<T>(mut a: T, mut b: T) -> T
-    where T: Eq + std::ops::Rem<Output=T> + PartialOrd + TryFrom<u64> + Copy {
-    if a == b { return a; }
+where
+    T: Eq + std::ops::Rem<Output = T> + PartialOrd + TryFrom<u64> + Copy,
+{
+    if a == b {
+        return a;
+    }
     if b > a {
         let temp = a;
         a = b;
@@ -16,7 +20,14 @@ pub fn gcd<T>(mut a: T, mut b: T) -> T
 }
 
 pub fn lcm<T>(a: T, b: T) -> T
-    where T: Eq + std::ops::Rem<Output=T> + PartialOrd + Copy + From<u64> + std::ops::Div + std::ops::Mul<<T as std::ops::Div>::Output, Output=T> {
-    // LCM = a*b / gcd
+where
+    T: Eq
+        + std::ops::Rem<Output = T>
+        + PartialOrd
+        + Copy
+        + From<u64>
+        + std::ops::Div
+        + std::ops::Mul<<T as std::ops::Div>::Output, Output = T>,
+{
     return a * (b / gcd(a, b));
 }

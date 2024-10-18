@@ -54,7 +54,7 @@ fn part_2_decode_instructions(input: &str) -> Vec<Instruction> {
                 a => panic!("Invalid hex code {a} {:?}", direction_str),
             };
 
-            Instruction{
+            Instruction {
                 length: length,
                 direction: direction,
             }
@@ -105,7 +105,7 @@ fn part_1(input: &str) -> u64 {
     calculate_area_from_instructions(instructions)
 }
 
-fn part_2(input: &str)  -> u64 {
+fn part_2(input: &str) -> u64 {
     let instructions = part_2_decode_instructions(input);
     calculate_area_from_instructions(instructions)
 }

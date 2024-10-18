@@ -6,7 +6,7 @@ fn find_empty_space_vertical(image: &Vec<&str>) -> Vec<usize> {
         .map(|(i, _)| i)
         .collect();
 
-        ret.sort();
+    ret.sort();
     ret
 }
 
@@ -75,7 +75,6 @@ fn calculate_galaxies(image: Vec<&str>, expand_multiplier: usize) -> Vec<Coord> 
 
     galaxies
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Ord, PartialOrd, Eq)]
 struct Coord {

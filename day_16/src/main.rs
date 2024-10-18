@@ -27,10 +27,7 @@ fn beam_move(contraction: &Vec<Vec<char>>, state: GridState) -> Vec<GridState> {
 
     directions
         .iter()
-        .map(|&direction| GridState {
-            direction,
-            ..state
-        })
+        .map(|&direction| GridState { direction, ..state })
         .filter(|state| state.check_bounds(width, height))
         .map(|state| {
             let (x, y) = state.direction.get_translation();
@@ -120,13 +117,11 @@ fn part_2(contraction: &Vec<Vec<char>>) -> usize {
         })
         .collect();
 
-    let initial_states: Vec<GridState> = vec![
-        north_initial,
-        west_initial,
-        east_initial,
-        south_initial,
-    ].into_iter().flatten().collect();
-
+    let initial_states: Vec<GridState> =
+        vec![north_initial, west_initial, east_initial, south_initial]
+            .into_iter()
+            .flatten()
+            .collect();
 
     initial_states
         .iter()

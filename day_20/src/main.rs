@@ -1,9 +1,9 @@
-use std::collections::{HashMap, VecDeque};
-use std::ops::Not;
-use std::time::Instant;
 use crate::ModuleType::{Broadcast, Conjunction, FlipFlop};
 use crate::SignalLevel::{High, Low};
 use library::math::lcm;
+use std::collections::{HashMap, VecDeque};
+use std::ops::Not;
+use std::time::Instant;
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
 enum SignalLevel {
@@ -31,25 +31,23 @@ enum ModuleType {
 impl ModuleType {
     fn handle_pulse(&mut self, label: &str, signal_level: &SignalLevel) -> Option<SignalLevel> {
         match self {
-            FlipFlop(state) =>
-                match signal_level {
-                    High => None,
-                    Low => {
-                        *state = !*state;
-                        Some(*state)
-                    }
+            FlipFlop(state) => match signal_level {
+                High => None,
+                Low => {
+                    *state = !*state;
+                    Some(*state)
                 }
-            ,
+            },
             Conjunction(inputs) => {
-                let Some(input_pos) = inputs.iter().position(|input| input.0.as_str() == label) else {
+                let Some(input_pos) = inputs.iter().position(|input| input.0.as_str() == label)
+                else {
                     panic!("Not found: {}", label);
                 };
 
-                let Some(input) = inputs.get_mut(input_pos)else {
+                let Some(input) = inputs.get_mut(input_pos) else {
                     panic!("Conjunction called from not connected module");
                 };
                 input.1 = *signal_level;
-
 
                 match inputs.iter().all(|input| input.1 == High) {
                     true => Some(Low),
@@ -87,7 +85,10 @@ impl Module {
             t => panic!("Unknown Type '{}'", t),
         };
 
-        let destinations = destinations_str.split(", ").map(|dest| dest.to_string()).collect();
+        let destinations = destinations_str
+            .split(", ")
+            .map(|dest| dest.to_string())
+            .collect();
 
         Self {
             label: label.to_string(),
@@ -109,7 +110,10 @@ struct Machine {
 
 impl Machine {
     fn from_string(input: &str) -> Self {
-        let mut machine: Vec<_> = input.lines().map(|line| Module::from_string(line)).collect();
+        let mut machine: Vec<_> = input
+            .lines()
+            .map(|line| Module::from_string(line))
+            .collect();
 
         let machine_clone = machine.clone();
 
@@ -119,7 +123,10 @@ impl Machine {
                 Conjunction(t) => t,
                 _ => continue,
             };
-            for p_module in machine_clone.iter().filter(|f_module| f_module.destinations.contains(&module.label)) {
+            for p_module in machine_clone
+                .iter()
+                .filter(|f_module| f_module.destinations.contains(&module.label))
+            {
                 module_type.push((p_module.label.clone(), Low));
             }
         }
@@ -130,9 +137,7 @@ impl Machine {
             modules.insert(module.label.clone(), module);
         }
 
-        Machine {
-            modules
-        }
+        Machine { modules }
     }
     fn press_button(&mut self, condition: EndCondition) -> (u64, u64) {
         let mut signals: VecDeque<(String, String, SignalLevel)> = VecDeque::new();
@@ -144,10 +149,12 @@ impl Machine {
         loop {
             button_presses += 1;
             match condition {
-                EndCondition::ButtonPresses(max_presses) => if button_presses > max_presses {
-                    break;
+                EndCondition::ButtonPresses(max_presses) => {
+                    if button_presses > max_presses {
+                        break;
+                    }
                 }
-                _ => ()
+                _ => (),
             }
 
             signals.push_front(("button".to_string(), "broadcaster".to_string(), Low));
@@ -162,7 +169,6 @@ impl Machine {
                     continue;
                 };
 
-
                 let Some(new_signal) = module.module_type.handle_pulse(&source, &signal) else {
                     continue;
                 };
@@ -175,12 +181,15 @@ impl Machine {
                             }
                         }
                     }
-                    _ => ()
+                    _ => (),
                 }
 
-
                 for destination in &module.destinations {
-                    signals.push_back((module_label.to_string(), destination.to_string(), new_signal));
+                    signals.push_back((
+                        module_label.to_string(),
+                        destination.to_string(),
+                        new_signal,
+                    ));
                 }
             }
         }
@@ -196,13 +205,19 @@ fn part_1(mut machine: Machine) -> u64 {
 }
 
 fn part_2(machine: Machine) -> u64 {
-    let Some(broadcaster) = machine.modules.get("broadcaster")else { panic!("Can't find broadcaster") };
+    let Some(broadcaster) = machine.modules.get("broadcaster") else {
+        panic!("Can't find broadcaster")
+    };
 
     let mut partial_answers: Vec<u64> = Vec::new();
 
     for destination in broadcaster.destinations.iter() {
-        let Some(conj_label) = find_conjecture(&machine, destination) else { panic!("Cannot find conjecture"); };
-        let part_answer = machine.clone().press_button(EndCondition::ModuleReceiveSignal(conj_label, Low));
+        let Some(conj_label) = find_conjecture(&machine, destination) else {
+            panic!("Cannot find conjecture");
+        };
+        let part_answer = machine
+            .clone()
+            .press_button(EndCondition::ModuleReceiveSignal(conj_label, Low));
         partial_answers.push(part_answer.0);
     }
 
@@ -232,10 +247,8 @@ fn find_conjecture(machine: &Machine, module_label: &str) -> Option<String> {
     None
 }
 
-
 fn main() {
     let input = include_str!("../input.txt");
-
 
     let machine = Machine::from_string(input);
 
@@ -243,7 +256,6 @@ fn main() {
     let part_1_answer = part_1(machine.clone());
     let duration = start.elapsed();
     println!("Part 1 answer: {part_1_answer}, time: {:?}", duration);
-
 
     let start: Instant = Instant::now();
     let part_2_answer = part_2(machine);
