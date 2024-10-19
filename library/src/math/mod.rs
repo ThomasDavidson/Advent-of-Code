@@ -1,3 +1,6 @@
+use num::zero;
+use std::ops::{Add, Rem};
+
 // Find GCD
 pub fn gcd<T>(mut a: T, mut b: T) -> T
 where
@@ -30,4 +33,19 @@ where
         + std::ops::Mul<<T as std::ops::Div>::Output, Output = T>,
 {
     return a * (b / gcd(a, b));
+}
+
+pub fn sawtooth<T>(number: T, max: T) -> T
+where
+    T: PartialOrd
+    + Rem<Output = T>
+    + Add<Output = T>
+    + Copy
+    + num::Zero,
+{
+    if number < zero() {
+        (max + number % max) % max
+    } else {
+        number % max
+    }
 }
