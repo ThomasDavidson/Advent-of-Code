@@ -1,6 +1,11 @@
 use crate::Tile::{GardenPlot, Rocks, Start};
-use library::grid::{Direction, GridState};
-use std::{collections::VecDeque, fmt, time::Instant};
+use library::grid::Direction;
+use library::math::sawtooth;
+use std::{
+    collections::{HashMap, VecDeque},
+    fmt,
+    time::Instant,
+};
 
 #[derive(Debug, Eq, PartialEq)]
 enum Tile {
@@ -36,11 +41,11 @@ impl fmt::Display for Tile {
 #[derive(Debug)]
 struct Garden {
     grid: Vec<Vec<Tile>>,
-    steps: Vec<Vec<u16>>,
+    steps: HashMap<(i64, i64), u32>,
 }
 
 impl Garden {
-    pub const DEFAULT_STEP: u16 = u16::MAX;
+    pub const DEFAULT_STEP: u32 = u32::MAX;
 
     fn from_string(input: &str) -> Self {
         let grid: Vec<Vec<Tile>> = input
@@ -48,19 +53,16 @@ impl Garden {
             .map(|line| line.chars().map(|c| Tile::from_char(c)).collect())
             .collect();
 
-        // create grid with zero weight
-        let steps: Vec<Vec<u16>> = grid
-            .iter()
-            .map(|l| l.iter().map(|_| Garden::DEFAULT_STEP).collect())
-            .collect();
-
-        Self { grid, steps }
+        Self {
+            grid,
+            steps: HashMap::new(),
+        }
     }
-    fn find_start(&self) -> (usize, usize) {
+    fn find_start(&self) -> (i64, i64) {
         for (y, line) in self.grid.iter().enumerate() {
             for (x, tile) in line.iter().enumerate() {
                 if *tile == Start {
-                    return (x, y);
+                    return (x as i64, y as i64);
                 }
             }
         }
@@ -74,23 +76,36 @@ impl Garden {
         self.grid.len()
     }
 
+    fn get_tile(&self, coords: (i64, i64)) -> (usize, usize) {
+        let width = self.width();
+        let height = self.height();
+        let (x, y) = coords;
+
+        // uses sawtooth to get tile in infinitly expanding map
+        let index_x = sawtooth(x, width as i64);
+        let index_y = sawtooth(y, height as i64);
+        (index_y as usize, index_x as usize)
+    }
+
     fn visited(&self, elf: &Elf) -> bool {
-        let (x, y) = elf.coords;
         // checks if spot has been visited before with fewer steps
-        self.steps[x][y] <= elf.steps
+        let steps = match self.steps.get(&elf.coords) {
+            None => Garden::DEFAULT_STEP,
+            Some(step) => *step,
+        };
+
+        steps <= elf.steps
     }
 
     fn visit(&mut self, elf: &Elf) {
-        let (x, y) = elf.coords;
-        self.steps[x][y] = elf.steps;
+        self.steps.insert(elf.coords, elf.steps);
     }
-    fn get_step_coords(&self) -> impl Iterator<Item = &u16> {
-        self.steps.iter().flatten()
+
+    fn get_step_coords(&self) -> impl Iterator<Item = &u32> {
+        self.steps.values()
     }
 
     fn find_next(&mut self, elf: Elf) -> VecDeque<Elf> {
-        let width = self.width();
-        let height = self.height();
         let (x, y) = elf.coords;
 
         if elf.steps == elf.max_steps {
@@ -102,19 +117,11 @@ impl Garden {
         let mut coords = VecDeque::new();
 
         for direction in directions {
-            let grid_state = GridState { direction, x, y };
-
-            if !grid_state.check_bounds(width, height) {
-                continue;
-            }
-
             let (x_offset, y_offset) = direction.get_translation();
-            let (next_x, next_y) = (
-                (x as i16 + x_offset) as usize,
-                (y as i16 + y_offset) as usize,
-            );
+            let (next_x, next_y) = ((x + x_offset as i64), (y + y_offset as i64));
 
-            let next_tile = &self.grid[next_x][next_y];
+            let (index_x, index_y) = self.get_tile((next_x, next_y));
+            let next_tile = &self.grid[index_x][index_y];
 
             if *next_tile == Rocks {
                 continue;
@@ -136,17 +143,52 @@ impl Garden {
     }
 }
 
-struct Elf {
-    max_steps: u16,
-    steps: u16,
-    coords: (usize, usize),
+impl fmt::Display for Garden {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let steps: Vec<&(i64, i64)> = self.steps.keys().collect::<Vec<_>>();
+        let min_x_visited = steps.iter().min_by_key(|f| f.0).unwrap().0; // - 10;
+        let min_y_visited = steps.iter().min_by_key(|f| f.1).unwrap().1; // - 10;
+        let max_x_visited = steps.iter().max_by_key(|f| f.0).unwrap().0; // + 10;
+        let max_y_visited = steps.iter().max_by_key(|f| f.1).unwrap().1; // + 10;
+
+        for y in min_y_visited..max_y_visited {
+            for x in min_x_visited..max_x_visited {
+                let (index_x, index_y) = self.get_tile((x, y));
+                let tile = &self.grid[index_x][index_y];
+                let elf = Elf {
+                    max_steps: 0,
+                    steps: 0,
+                    coords: (x as i64, y as i64),
+                };
+                match self.steps.get(&elf.coords) {
+                    None => write!(f, "{}", tile)?,
+                    Some(steps) => {
+                        if steps % 2 == 0 {
+                            write!(f, "O")?;
+                        } else {
+                            write!(f, "{}", tile)?;
+                        }
+                    }
+                }
+            }
+            writeln!(f)?; // Add a newline at the end of each row
+        }
+
+        Ok(())
+    }
 }
 
-fn part_1(input: &str) -> i32 {
+struct Elf {
+    max_steps: u32,
+    steps: u32,
+    coords: (i64, i64),
+}
+
+fn part_1(input: &str, max_steps: u32) -> i32 {
     let mut garden = Garden::from_string(input);
 
     let gardener = Elf {
-        max_steps: 64,
+        max_steps,
         steps: 0,
         coords: garden.find_start(),
     };
@@ -163,14 +205,24 @@ fn part_1(input: &str) -> i32 {
         gardeners.append(&mut next);
     }
 
+    println!("{}", &garden);
+
     garden
         .get_step_coords()
         .map(|step| {
             // check if visited from step count
-            if step % 2 == 0 && *step != Garden::DEFAULT_STEP {
-                1
+            if max_steps % 2 == 0 {
+                if step % 2 == 0 {
+                    1
+                } else {
+                    0
+                }
             } else {
-                0
+                if step % 2 == 0 {
+                    0
+                } else {
+                    1
+                }
             }
         })
         .fold(0, |acc, x| acc + x)
@@ -180,7 +232,54 @@ fn main() {
     let input = include_str!("../input.txt");
 
     let start: Instant = Instant::now();
-    let part_1_answer = part_1(&input);
+    let part_1_answer = part_1(&input, 64);
     let duration = start.elapsed();
     println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::part_1;
+    #[test]
+    fn test1() {
+        let input = include_str!("../example.txt");
+        let result = part_1(input, 6);
+        assert_eq!(result, 16);
+    }
+    #[test]
+    fn test2() {
+        let input = include_str!("../example.txt");
+        let result = part_1(input, 10);
+        assert_eq!(result, 50);
+    }
+    #[test]
+    fn test3() {
+        let input = include_str!("../example.txt");
+        let result = part_1(input, 50);
+        assert_eq!(result, 1594);
+    }
+    #[test]
+    fn test4() {
+        let input = include_str!("../example.txt");
+        let result = part_1(input, 100);
+        assert_eq!(result, 6536);
+    }
+    #[test]
+    fn test5() {
+        let input = include_str!("../example.txt");
+        let result = part_1(input, 500);
+        assert_eq!(result, 167004);
+    }
+    #[test]
+    fn test6() {
+        let input = include_str!("../example.txt");
+        let result = part_1(input, 1000);
+        assert_eq!(result, 668697);
+    }
+    #[test]
+    fn test7() {
+        let input = include_str!("../example.txt");
+        let result = part_1(input, 5000);
+        assert_eq!(result, 16733044);
+    }
 }
