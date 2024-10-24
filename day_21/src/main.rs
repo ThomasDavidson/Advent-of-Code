@@ -106,6 +106,20 @@ impl Garden {
         self.steps.values()
     }
 
+    fn calculate_score(&self, max_steps: u32) -> u64 {
+        self.get_step_coords()
+            .map(|step| {
+                // even coordinates can only be reached with an even amount of steps an vise versa with odd steps
+                let even_coord = step % 2 == 0;
+                let even_max_step = max_steps % 2 == 0;
+                match even_coord == even_max_step {
+                    true => 1,
+                    false => 0,
+                }
+            })
+            .fold(0, |acc, x| acc + x)
+    }
+
     fn get_color(&self, x: i64, y: i64) -> u8 {
         let width = self.width() as i64;
         let height = self.width() as i64;
@@ -226,28 +240,7 @@ fn part_1(input: &str, max_steps: u32) -> i32 {
         let mut next = garden.find_next(gardener);
         gardeners.append(&mut next);
     }
-
-    println!("{}", &garden);
-
-    garden
-        .get_step_coords()
-        .map(|step| {
-            // check if visited from step count
-            if max_steps % 2 == 0 {
-                if step % 2 == 0 {
-                    1
-                } else {
-                    0
-                }
-            } else {
-                if step % 2 == 0 {
-                    0
-                } else {
-                    1
-                }
-            }
-        })
-        .fold(0, |acc, x| acc + x)
+    garden.calculate_score(max_steps)
 }
 
 fn main() {
