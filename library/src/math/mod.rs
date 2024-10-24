@@ -1,5 +1,5 @@
 use num::zero;
-use std::ops::{Add, Rem};
+use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 // Find GCD
 pub fn gcd<T>(mut a: T, mut b: T) -> T
@@ -37,15 +37,30 @@ where
 
 pub fn sawtooth<T>(number: T, max: T) -> T
 where
-    T: PartialOrd
-    + Rem<Output = T>
-    + Add<Output = T>
-    + Copy
-    + num::Zero,
+    T: PartialOrd 
+        + Rem<Output = T>
+        + Add<Output = T>
+        + Copy
+        + num::Zero,
 {
     if number < zero() {
         (max + number % max) % max
     } else {
         number % max
     }
+}
+
+pub fn round_to<T>(num_to_round: T, multiple: T) -> T
+where
+    T: PartialOrd
+        + Rem<Output = T>
+        + Add<Output = T>
+        + Div<Output = T>
+        + Sub<Output = T>
+        + Mul<Output = T>
+        + Neg<Output = T>
+        + From<u8>
+        + Copy,
+{
+    ((num_to_round + multiple - T::from(1)) / multiple) * multiple
 }
