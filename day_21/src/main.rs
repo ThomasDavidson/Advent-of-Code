@@ -1,4 +1,5 @@
 use crate::Tile::{GardenPlot, Rocks, Start};
+use colored::Colorize;
 use library::grid::Direction;
 use library::math::sawtooth;
 use std::{
@@ -105,6 +106,17 @@ impl Garden {
         self.steps.values()
     }
 
+    fn get_color(&self, x: i64, y: i64) -> u8 {
+        let width = self.width() as i64;
+        let height = self.width() as i64;
+        match ((x + width * 10) / width % 2, (y + height * 10) / height % 2) {
+            (0, 0) => 0,
+            (_, 0) => 1,
+            (0, _) => 2,
+            (_, _) => 3,
+        }
+    }
+
     fn find_next(&mut self, elf: Elf) -> VecDeque<Elf> {
         let (x, y) = elf.coords;
 
@@ -146,10 +158,10 @@ impl Garden {
 impl fmt::Display for Garden {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let steps: Vec<&(i64, i64)> = self.steps.keys().collect::<Vec<_>>();
-        let min_x_visited = steps.iter().min_by_key(|f| f.0).unwrap().0; // - 10;
-        let min_y_visited = steps.iter().min_by_key(|f| f.1).unwrap().1; // - 10;
-        let max_x_visited = steps.iter().max_by_key(|f| f.0).unwrap().0; // + 10;
-        let max_y_visited = steps.iter().max_by_key(|f| f.1).unwrap().1; // + 10;
+        let min_x_visited = steps.iter().min_by_key(|f| f.0).unwrap().0 - 10;
+        let min_y_visited = steps.iter().min_by_key(|f| f.1).unwrap().1 - 10;
+        let max_x_visited = steps.iter().max_by_key(|f| f.0).unwrap().0 + 10;
+        let max_y_visited = steps.iter().max_by_key(|f| f.1).unwrap().1 + 10;
 
         for y in min_y_visited..max_y_visited {
             for x in min_x_visited..max_x_visited {
@@ -160,16 +172,26 @@ impl fmt::Display for Garden {
                     steps: 0,
                     coords: (x as i64, y as i64),
                 };
-                match self.steps.get(&elf.coords) {
-                    None => write!(f, "{}", tile)?,
-                    Some(steps) => {
+
+                let s = if let Some(steps) = self.steps.get(&elf.coords) {
                         if steps % 2 == 0 {
-                            write!(f, "O")?;
+                        format!("O")
                         } else {
-                            write!(f, "{}", tile)?;
-                        }
+                        format!("{}", tile)
                     }
-                }
+                } else {
+                    format!("{}", tile)
+                };
+
+                let cs = match self.get_color(x, y) {
+                    0 => format!("{}", s).red(),
+                    1 => format!("{}", s).blue(),
+                    2 => format!("{}", s).magenta(),
+                    3 => format!("{}", s).green(),
+                    _ => panic!(),
+                };
+
+                write!(f, "{}", cs)?;
             }
             writeln!(f)?; // Add a newline at the end of each row
         }
