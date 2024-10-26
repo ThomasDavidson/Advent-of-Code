@@ -464,27 +464,45 @@ mod tests {
         assert_eq!(result, 668697);
     }
     #[test]
+    fn test2_1() {
+        let input = include_str!("../example2.txt");
+        let result = part_2(input, 7);
+        assert_eq!(result, 52);
+    }
+    #[test]
+    fn test2_2() {
+        let input = include_str!("../example2.txt");
+        let result = part_2(input, 8);
+        assert_eq!(result, 68);
+    }
+    #[test]
+    fn test2_3() {
+        let input = include_str!("../example2.txt");
+        let result = part_2(input, 25);
+        assert_eq!(result, 576);
+    }
+    #[test]
     fn test2_4() {
-        let input = include_str!("../example.txt");
-        let result = part_2(input, 100);
-        assert_eq!(result, 6536);
+        let input = include_str!("../example2.txt");
+        let result = part_2(input, 42);
+        assert_eq!(result, 1576);
     }
     #[test]
     fn test2_5() {
-        let input = include_str!("../example.txt");
-        let result = part_2(input, 500);
-        assert_eq!(result, 167004);
+        let input = include_str!("../example2.txt");
+        let result = part_2(input, 59);
+        assert_eq!(result, 3068);
     }
     #[test]
     fn test2_6() {
-        let input = include_str!("../example.txt");
-        let result = part_2(input, 1000);
-        assert_eq!(result, 668697);
+        let input = include_str!("../example2.txt");
+        let result = part_2(input, 76);
+        assert_eq!(result, 5052);
     }
     #[test]
     fn test2_7() {
-        let input = include_str!("../example.txt");
-        let result = part_2(input, 5000);
-        assert_eq!(result, 16733044);
+        let input = include_str!("../example2.txt");
+        let result = part_2(input, 1180148);
+        assert_eq!(result, 1185525742508);
     }
 }
