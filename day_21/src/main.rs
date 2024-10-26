@@ -152,9 +152,6 @@ impl Garden {
                 let steps = self.get_steps_range(y + height as i64, y as i64, x + width as i64, x);
                 let score = self.calculate_score_from_iter(steps, max_steps);
                 print!("{score}\t");
-                if score == 27 {
-                    self.print_steps_range(y + height as i64, y as i64, x + width as i64, x);
-                }
             }
             println!()
         }
@@ -426,8 +423,6 @@ fn part_2(input: &str, max_steps: u32) -> u64 {
     let n = ((max_steps as i64 - s) / width) as u64;
 
     println!("s: {s}, n: {n}");
-
-    // println!("n for max steps: {}", n);
 
     (n - 1).pow(2) * e1 + n.pow(2) * e2 + (n - 1) * a + n * b + t + d
 }
