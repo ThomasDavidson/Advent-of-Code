@@ -336,10 +336,11 @@ fn part_2(input: &str, max_steps: u32) -> u64 {
         panic!("Not sqare");
     }
 
-    let reduced_max_steps = if max_steps > width as u32 * 5 {
+    let reduced_max_steps = if max_steps > width as u32 * 4 {
         (max_steps as i64 % width + width * 2) as u32
     } else {
-        panic!();
+        println!("Using part 1 method due to size");
+        return part_1(input, max_steps);
     };
 
     println!("steps: {max_steps}, reduced steps: {reduced_max_steps}");
