@@ -273,9 +273,9 @@ impl fmt::Display for Garden {
 
                 let s = if let Some(steps) = self.steps.get(&elf.coords) {
                         if steps % 2 == 0 {
+                        format!("E")
+                    } else {
                         format!("O")
-                        } else {
-                        format!("{}", tile)
                     }
                 } else {
                     format!("{}", tile)
