@@ -419,7 +419,7 @@ fn main() {
     println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
 
     let start: Instant = Instant::now();
-    let part_2_answer = part_2(&input, 1000);
+    let part_2_answer = part_2(&input, 26501365);
     let duration = start.elapsed();
     println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
 }
