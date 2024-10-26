@@ -147,15 +147,6 @@ impl Garden {
         let max_x_step = round_to(max_x_visited, width as i64);
         let max_y_step = round_to(max_y_visited, height as i64);
 
-        for x in (min_x_step..max_x_step).step_by(width) {
-            for y in (min_y_step..max_y_step).step_by(height) {
-                let steps = self.get_steps_range(y + height as i64, y as i64, x + width as i64, x);
-                let score = self.calculate_score_from_iter(steps, max_steps);
-                print!("{score}\t");
-            }
-            println!()
-        }
-
         let us: Vec<Vec<u64>> = (min_x_step..max_x_step)
             .step_by(width)
             .map(|x| {
@@ -413,17 +404,8 @@ fn part_2(input: &str, max_steps: u32) -> u64 {
     let b4 = scores[origin + 1][origin + 2];
     let b = b1 + b2 + b3 + b4;
 
-    println!("a1: {a1}, a2: {a2}, a3: {a3}, a4: {a4}");
-    println!("t1: {t1}, t2: {t2}, t3: {t3}, t4: {t4}");
-    println!("b1: {b1}, b2: {b2}, b3: {b3}, b4: {b4}");
-    println!("d1: {d1}, d2: {d2}, d3: {d3}, d4: {d4}");
-
-    println!("a: {a}, b: {b}, t: {t}, d {d}");
-
     let s = (width - 1) / 2;
     let n = ((max_steps as i64 - s) / width) as u64;
-
-    println!("s: {s}, n: {n}");
 
     (n - 1).pow(2) * e1 + n.pow(2) * e2 + (n - 1) * a + n * b + t + d
 }
