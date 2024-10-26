@@ -295,7 +295,7 @@ struct Elf {
     coords: (i64, i64),
 }
 
-fn part_1(input: &str, max_steps: u32) -> i32 {
+fn part_1(input: &str, max_steps: u32) -> u64 {
     let mut garden = Garden::from_string(input);
 
     let gardener = Elf {
