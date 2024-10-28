@@ -103,12 +103,14 @@ impl fmt::Display for Forest {
 struct Hiker {
     coords: Coords<usize>,
     previous: Vec<Coords<usize>>,
+    score: usize,
 }
 impl Hiker {
     fn new(start: Coords<usize>) -> Self {
         Self {
             coords: start,
-            previous: Vec::new(),
+            previous: vec![start],
+            score: 0,
         }
     }
 
@@ -129,6 +131,7 @@ impl Hiker {
                 let hiker = Self {
                     coords: *coords,
                     previous: new_previous,
+                    score: self.score + 1,
                     ..self.clone()
                 };
 
@@ -152,9 +155,6 @@ impl Hiker {
             println!();
         }
     }
-    fn get_hike_length(&self) -> usize {
-        self.previous.len()
-    }
 }
 
 fn part_1(input: &str) -> usize {
@@ -167,16 +167,20 @@ fn part_1(input: &str) -> usize {
     let mut hikers: Vec<Hiker> = vec![initlal];
 
     let mut longest_hike_len: usize = 0;
+    let mut longest_hike: Option<Hiker> = None;
 
     while let Some(hiker) = hikers.pop() {
         if hiker.coords.y + 1 == height {
-            longest_hike_len = longest_hike_len.max(hiker.get_hike_length());
+            if longest_hike_len < hiker.score {
+                longest_hike_len = hiker.score;
+                longest_hike = Some(hiker.clone());
+            }
         }
         let mut next = hiker.hike(&forest, true);
         hikers.append(&mut next);
     }
 
-    longest_hike_len
+    longest_hike.unwrap().score
 }
 
 fn main() {
