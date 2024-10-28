@@ -1,4 +1,8 @@
-use std::ops::{Add, Neg};
+use num::{one, zero, One, Zero};
+use std::{
+    ops::{Add, Neg},
+    usize,
+};
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DirectionFilter {
     Forward,
@@ -27,13 +31,16 @@ impl Direction {
         }
     }
 
-    pub const fn get_translation(self) -> (i16, i16) {
+    pub fn get_translation<T>(self) -> (T, T)
+    where
+        T: Zero + One + Neg<Output = T>,
+    {
         match self {
-            Direction::North => (0, -1),
-            Direction::East => (1, 0),
-            Direction::South => (0, 1),
-            Direction::West => (-1, 0),
-            Direction::None => (0, 0),
+            Direction::North => (zero(), -one::<T>()),
+            Direction::East => (one(), zero()),
+            Direction::South => (zero(), one()),
+            Direction::West => (-one::<T>(), zero()),
+            Direction::None => (zero(), zero()),
         }
     }
     pub const fn inverse(self) -> Self {
