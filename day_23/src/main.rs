@@ -70,14 +70,18 @@ impl Forest {
     fn get_tile(&self, coords: &Coords<usize>) -> &Tile {
         &self.grid[coords.y][coords.x]
     }
-    fn adjacent_tiles(&self, coords: &Coords<usize>) -> Vec<Coords<usize>> {
+    fn adjacent_tiles(&self, coords: &Coords<usize>, part_1: bool) -> Vec<Coords<usize>> {
         let width = self.grid[0].len();
         let height = self.grid.len();
         let tile = self.get_tile(&coords);
 
+        if part_1 {
         tile.to_directions()
-            .iter()
-            .filter_map(|d| (*coords + *d).ok())
+        } else {
+            Direction::MOVE.to_vec()
+        }
+        .into_iter()
+        .filter_map(|d| (*coords + d).ok())
             .filter(|coords| !coords.check_bounds(width, height))
             .collect()
     }
@@ -112,9 +116,9 @@ impl Hiker {
         self.previous.contains(coord)
     }
 
-    fn hike(&self, forest: &Forest) -> Vec<Self> {
+    fn hike(&self, forest: &Forest, part_1: bool) -> Vec<Self> {
         forest
-            .adjacent_tiles(&self.coords)
+            .adjacent_tiles(&self.coords, part_1)
             .iter()
             .filter(|coords| *forest.get_tile(coords) != Tile::Forest)
             .filter(|coords| !self.previously_visited(coords))
@@ -168,7 +172,7 @@ fn part_1(input: &str) -> usize {
         if hiker.coords.y + 1 == height {
             longest_hike_len = longest_hike_len.max(hiker.get_hike_length());
         }
-        let mut next = hiker.hike(&forest);
+        let mut next = hiker.hike(&forest, true);
         hikers.append(&mut next);
     }
 
