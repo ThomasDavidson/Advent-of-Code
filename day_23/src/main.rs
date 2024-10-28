@@ -90,6 +90,13 @@ struct Hiker {
     previous: Vec<Coords<usize>>,
 }
 impl Hiker {
+    fn new(start: Coords<usize>) -> Self {
+        Self {
+            coords: start,
+            previous: Vec::new(),
+        }
+    }
+
     fn previously_visited(&self, coord: &Coords<usize>) -> bool {
         self.previous.contains(coord)
     }
@@ -145,10 +152,7 @@ fn part_1(input: &str) -> usize {
     let height = forest.grid.len();
     let start = forest.get_start();
 
-    let initlal = Hiker {
-        coords: start,
-        previous: Vec::new(),
-    };
+    let initlal = Hiker::new(start);
 
     let mut hikers: Vec<Hiker> = vec![initlal];
 
