@@ -133,3 +133,44 @@ impl GridState {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Coords<T> {
+    pub x: T,
+    pub y: T,
+}
+
+impl<T: PartialOrd> Coords<T> {
+    pub fn new(x: T, y: T) -> Self {
+        Coords { x, y }
+    }
+    pub fn check_bounds(&self, width: T, height: T) -> bool {
+        width <= self.x || height <= self.y
+    }
+}
+
+impl Add<Direction> for Coords<usize> {
+    type Output = Result<Coords<usize>, &'static str>;
+
+    fn add(self, direction: Direction) -> Self::Output {
+        let Ok(x) = isize::try_from(self.x) else {
+            return Err("error");
+        };
+        let Ok(y) = isize::try_from(self.y) else {
+            return Err("error");
+        };
+
+        let (offset_x, offset_y): (isize, isize) = Direction::get_translation(direction);
+
+        let Ok(new_x) = usize::try_from(x + offset_x) else {
+            return Err("error");
+        };
+        let Ok(new_y) = usize::try_from(y + offset_y) else {
+            return Err("error");
+        };
+
+        let result = Self { x: new_x, y: new_y };
+
+        Ok(result)
+    }
+}
