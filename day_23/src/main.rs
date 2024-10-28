@@ -70,6 +70,17 @@ impl Forest {
     fn get_tile(&self, coords: &Coords<usize>) -> &Tile {
         &self.grid[coords.y][coords.x]
     }
+    fn adjacent_tiles(&self, coords: &Coords<usize>) -> Vec<Coords<usize>> {
+        let width = self.grid[0].len();
+        let height = self.grid.len();
+        let tile = self.get_tile(&coords);
+
+        tile.to_directions()
+            .iter()
+            .filter_map(|d| (*coords + *d).ok())
+            .filter(|coords| !coords.check_bounds(width, height))
+            .collect()
+    }
 }
 
 impl fmt::Display for Forest {
@@ -102,24 +113,19 @@ impl Hiker {
     }
 
     fn hike(&self, forest: &Forest) -> Vec<Self> {
-        let width = forest.grid[0].len();
-        let height = forest.grid.len();
-
-        let tile = forest.get_tile(&self.coords);
-
-        tile.to_directions()
+        forest
+            .adjacent_tiles(&self.coords)
             .iter()
-            .filter_map(|d| (self.coords + *d).ok())
-            .filter(|coords| !coords.check_bounds(width, height))
             .filter(|coords| *forest.get_tile(coords) != Tile::Forest)
             .filter(|coords| !self.previously_visited(coords))
             .map(|coords| {
                 let mut new_previous = self.previous.clone();
-                new_previous.push(coords);
+                new_previous.push(coords.clone());
 
                 let hiker = Self {
-                    coords,
+                    coords: *coords,
                     previous: new_previous,
+                    ..self.clone()
                 };
 
                 hiker
