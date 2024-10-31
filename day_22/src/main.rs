@@ -387,7 +387,6 @@ fn part_1(input: &str) -> usize {
 fn part_2(input: &str) -> usize {
     let sand_stack = SandStack::from_str(input);
     let settled_sand_blocks = sand_stack.settle_blocks(&Axis3D::Z);
-    println!("{settled_sand_blocks}");
 
     // ignore first layer because it isn't supported by any blocks
     let blocks_bellow: Vec<Vec<(usize, Vec<usize>)>> = (1..=settled_sand_blocks.limit.z)
@@ -396,7 +395,6 @@ fn part_2(input: &str) -> usize {
 
     let mut collapse_by_map: HashMap<usize, Vec<usize>> = HashMap::new();
 
-    // while let Some((block_ident, blocks_above)) = starting_blocks.pop_back() {
     for (block_ident, blocks_bellow) in blocks_bellow.iter().flatten() {
         // let blocks_bellow = blocks_bellow_hash.get(&block_ident).unwrap();
         let mut collapse_by_list: Vec<usize> = Vec::new();
