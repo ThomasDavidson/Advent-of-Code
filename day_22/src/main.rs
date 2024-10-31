@@ -282,6 +282,7 @@ impl SandStack {
         &self,
         axis: AxisOrientation3D,
         coord: usize,
+        positive_direction: bool,
     ) -> Vec<(usize, Vec<usize>)> {
         assert!(axis == AxisOrientation3D::XY);
 
@@ -290,7 +291,11 @@ impl SandStack {
         let mut block_support_relation: HashMap<usize, Vec<usize>> = HashMap::new();
 
         for (base_coord, base_ident) in base_slice {
-            let supported_coord = base_coord.clone().translate(1, &Axis3D::Z);
+            let offset = match positive_direction {
+                true => 1,
+                false => -1,
+            };
+            let supported_coord = base_coord.clone().translate(offset, &Axis3D::Z);
 
             let mut new_supported_vec: Vec<usize> = Vec::new();
 
@@ -352,7 +357,7 @@ fn part_1(input: &str) -> usize {
 
     let supported_each_level: Vec<Vec<(usize, Vec<usize>)>> = (0..(settled_sand_blocks.limit.z))
         .rev()
-        .map(|z| settled_sand_blocks.get_supported_blocks(AxisOrientation3D::XY, z))
+        .map(|z| settled_sand_blocks.get_supported_blocks(AxisOrientation3D::XY, z, true))
         .collect();
 
     // remove reduncant blocks
@@ -379,6 +384,62 @@ fn part_1(input: &str) -> usize {
     blocks_removed
 }
 
+fn part_2(input: &str) -> usize {
+    let sand_stack = SandStack::from_str(input);
+    let settled_sand_blocks = sand_stack.settle_blocks(&Axis3D::Z);
+    println!("{settled_sand_blocks}");
+
+    // ignore first layer because it isn't supported by any blocks
+    let blocks_bellow: Vec<Vec<(usize, Vec<usize>)>> = (1..=settled_sand_blocks.limit.z)
+        .map(|z| settled_sand_blocks.get_supported_blocks(AxisOrientation3D::XY, z, false))
+        .collect();
+
+    let mut collapse_by_map: HashMap<usize, Vec<usize>> = HashMap::new();
+
+    // while let Some((block_ident, blocks_above)) = starting_blocks.pop_back() {
+    for (block_ident, blocks_bellow) in blocks_bellow.iter().flatten() {
+        // let blocks_bellow = blocks_bellow_hash.get(&block_ident).unwrap();
+        let mut collapse_by_list: Vec<usize> = Vec::new();
+
+        if blocks_bellow.len() == 1 {
+            collapse_by_list.push(blocks_bellow[0]);
+        }
+        let blocks_bellow_collapse: Vec<Option<&Vec<usize>>> = blocks_bellow
+            .iter()
+            .map(|block_bellow| collapse_by_map.get(block_bellow))
+            .collect();
+
+        // only add if all bellow it can be collapsed
+        if blocks_bellow_collapse.len() > 0
+            && blocks_bellow_collapse.iter().all(|blocks| blocks.is_some())
+        {
+            // list if collapse sources from each block bellow it
+            let blocks_bellow_collapse: Vec<Vec<usize>> = blocks_bellow_collapse
+                .iter()
+                .map(|block| block.unwrap().clone())
+                .collect();
+
+            // list of unique values from each vector in blocks_bellow_collapse
+            let mut unique_values_bellow_collapse: Vec<&usize> =
+                blocks_bellow_collapse.iter().flatten().collect();
+            unique_values_bellow_collapse.sort();
+            unique_values_bellow_collapse.dedup();
+
+            for ident in unique_values_bellow_collapse {
+                if blocks_bellow_collapse
+                    .iter()
+                    .all(|block| block.contains(ident))
+                {
+                    collapse_by_list.push(*ident);
+                }
+            }
+        }
+        collapse_by_map.insert(*block_ident, collapse_by_list);
+    }
+
+    collapse_by_map.values().fold(0, |a, b| a + b.len())
+}
+
 fn main() {
     let input = include_str!("../input.txt");
 
@@ -386,4 +447,26 @@ fn main() {
     let part_1_answer = part_1(&input);
     let duration = start.elapsed();
     println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
+
+    let start: Instant = Instant::now();
+    let part_2_answer = part_2(&input);
+    let duration = start.elapsed();
+    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::part_2;
+    #[test]
+    fn test1() {
+        let input = include_str!("../example.txt");
+        let result = part_2(input);
+        assert_eq!(result, 7);
+    }
+    #[test]
+    fn test2() {
+        let input = include_str!("../example2.txt");
+        let result = part_2(input);
+        assert_eq!(result, 1);
+    }
 }
