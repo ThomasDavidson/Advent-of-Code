@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{collections::HashMap, fmt::Formatter, hash::Hash};
+use std::{collections::HashMap, fmt::Formatter, hash::Hash, time::Instant};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 struct Coords3D {
@@ -345,14 +345,10 @@ fn get_num_supported(supported: &Vec<(usize, Vec<usize>)>) -> usize {
     supported_list.len()
 }
 
-fn main() {
-    let input = include_str!("../example.txt");
-
+fn part_1(input: &str) -> usize {
     let sand_stack = SandStack::from_str(input);
 
     let settled_sand_blocks = sand_stack.settle_blocks(&Axis3D::Z);
-
-    println!("{settled_sand_blocks}");
 
     let supported_each_level: Vec<Vec<(usize, Vec<usize>)>> = (0..(settled_sand_blocks.limit.z))
         .rev()
@@ -380,5 +376,14 @@ fn main() {
             }
         }
     }
-    println!("Blocks removed: {blocks_removed}");
+    blocks_removed
+}
+
+fn main() {
+    let input = include_str!("../input.txt");
+
+    let start: Instant = Instant::now();
+    let part_1_answer = part_1(&input);
+    let duration = start.elapsed();
+    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
 }
