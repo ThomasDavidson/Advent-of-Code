@@ -311,6 +311,8 @@ impl SandStack {
 
             if let Some(supported_vec) = block_support_relation.get_mut(base_ident) {
                 supported_vec.append(&mut new_supported_vec);
+                supported_vec.sort();
+                supported_vec.dedup();
             } else {
                 block_support_relation.insert(*base_ident, new_supported_vec);
             }
