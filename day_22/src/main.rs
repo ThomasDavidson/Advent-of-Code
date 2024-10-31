@@ -469,4 +469,10 @@ mod tests {
         let result = part_2(input);
         assert_eq!(result, 1);
     }
+    #[test]
+    fn test3() {
+        let input = include_str!("../example3.txt");
+        let result = part_2(input);
+        assert_eq!(result, 5);
+    }
 }
