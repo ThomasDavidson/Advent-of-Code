@@ -256,7 +256,7 @@ impl SandStack {
 
         let mut settled = self.clone();
 
-        for a in 0..limit {
+        for a in 0..=limit {
             let slice = self.get_slice(&slice_orientation, a);
 
             let mut idents: Vec<usize> = slice.iter().map(|(_coords, ident)| **ident).collect();
