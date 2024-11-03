@@ -114,16 +114,12 @@ fn main() {
     let mut min_j = 0;
     for hail_stone in storm.hail_stones.iter() {
         min_j += 1;
-        for (j, hail_stone2) in storm
+        for (_j, hail_stone2) in storm
             .hail_stones
             .iter()
             .enumerate()
-            .filter(|hs| hs.1 != hail_stone)
+            .filter(|hs| hs.1 != hail_stone && min_j <= hs.0)
         {
-            if min_j > j {
-                continue;
-            }
-
             let (x0, y0) = match hail_stone.check_intersection(hail_stone2) {
                 None => continue,
                 Some(xy0) => xy0,
