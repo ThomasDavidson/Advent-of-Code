@@ -135,14 +135,28 @@ fn main() {
                 y0 - hail_stone.position.y as f32,
             );
 
-            if dx / dy != hail_stone.velocity.x as f32 / hail_stone.velocity.y as f32 {
+            if (dy.is_sign_positive() != hail_stone.velocity.y.is_positive())
+                || (dx.is_sign_positive() != hail_stone.velocity.x.is_positive())
+            {
+                continue;
+            }
+
+            let (dx2, dy2) = (
+                x0 - hail_stone2.position.x as f32,
+                y0 - hail_stone2.position.y as f32,
+            );
+
+            if (dy2.is_sign_positive() != hail_stone2.velocity.y.is_positive())
+                || (dx2.is_sign_positive() != hail_stone2.velocity.x.is_positive())
+            {
                 continue;
             }
 
             // check if intersection is within area
-            if x0 > xy_min && x0 < xy_max && y0 > xy_min && y0 < xy_max {
-                score += 1;
+            if (x0 < xy_min || x0 > xy_max) || (y0 < xy_min || y0 > xy_max) {
+                continue;
             }
+            score += 1;
         }
     }
     println!("Score: {score}");
