@@ -1,6 +1,7 @@
 use itertools::Itertools;
+use library::math::gcd;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Vec3D {
     x: i32,
     y: i32,
@@ -18,8 +19,18 @@ impl Vec3D {
         Self { x, y, z }
     }
 }
+impl std::ops::Sub for Vec3D {
+    type Output = Self;
+    fn sub(self, rhs: Vec3D) -> Self::Output {
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct HailStone {
     position: Vec3D,
     velocity: Vec3D,
@@ -27,10 +38,54 @@ struct HailStone {
 impl HailStone {
     fn from_line(line: &str) -> Self {
         let (position_str, velocity_str) = line.split_once(" @ ").unwrap();
-        let pat = ", ";
         let position = Vec3D::from_str(position_str);
         let velocity = Vec3D::from_str(velocity_str);
         Self { position, velocity }
+    }
+    fn get_equation(&self) -> (i32, i32, i32) {
+        // m = y / x
+        let m = self.velocity.y as f32 / self.velocity.x as f32;
+
+        // y = mx+b
+        // b = y - mx
+        let b = self.position.y as f32 - m * self.position.x as f32;
+        println!("y={m}x+{b}");
+
+        // ax+by+c=0
+        let m_dec = match m == m.floor() {
+            true => 1.0,
+            false => m - m.floor(),
+        };
+        let m_miltiplier = 1.0 / m_dec;
+
+        let b_dec = match b == b.floor() {
+            true => 1.0,
+            false => b - b.floor(),
+        };
+        let b_miltiplier = 1.0 / b_dec;
+
+        let a_standard = gcd(m_miltiplier, b_miltiplier);
+        let b_standard = m * a_standard;
+        let c_standard = b * a_standard;
+
+        (-a_standard as i32, b_standard as i32, c_standard as i32)
+    }
+
+    fn check_intersection(&self, other: &Self) -> Option<(f32, f32)> {
+        let m1 = self.velocity.y as f32 / self.velocity.x as f32;
+        let m2 = other.velocity.y as f32 / other.velocity.x as f32;
+        if m1 == m2 {
+            return None;
+        }
+
+        let (a1, b1, c1) = self.get_equation();
+        println!("a1 {a1} b1 {b1} c1 {c1} ");
+        let (a2, b2, c2) = other.get_equation();
+        println!("a2 {a2} b2 {b2} c2 {c2} ");
+
+        let y0 = (b1 * c2 - b2 * c1) as f32 / (a1 * b2 - a2 * b1) as f32;
+        let x0 = (c1 * a2 - c2 * a1) as f32 / (b2 * a1 - a2 * b1) as f32;
+        Some((x0, y0))
     }
 }
 
@@ -55,7 +110,130 @@ fn main() {
 
     let storm = HailStorm::from_str(input);
 
-    for hail_stone in storm.hail_stones {
-        println!("{:?}", hail_stone);
+    let mut score = 0;
+
+    let xy_min = 7.0;
+    let xy_max = 27.0;
+
+    let mut min_j = 0;
+    for hail_stone in storm.hail_stones.iter() {
+        min_j += 1;
+        for (j, hail_stone2) in storm
+            .hail_stones
+            .iter()
+            .enumerate()
+            .filter(|hs| hs.1 != hail_stone)
+        {
+            if min_j > j {
+                continue;
+            }
+
+            println!();
+            println!("{:?}", hail_stone);
+            println!("{:?}", hail_stone2);
+            let (x0, y0) = match hail_stone.check_intersection(hail_stone2) {
+                None => continue,
+                Some(xy0) => xy0,
+            };
+
+            print!("x0 {x0}, y0 {y0}");
+            // check if the intersection has already happened
+            let (dx, dy) = (
+                x0 - hail_stone.position.x as f32,
+                y0 - hail_stone.position.y as f32,
+            );
+            // print!(" dx {dx}, dy {dy}");
+            // print!(" x {}, y {}", dx.is_sign_positive() == hail_stone.velocity.x.is_positive(), dy.is_sign_positive() == hail_stone.velocity.y.is_positive());
+            if (dx.is_sign_positive() != hail_stone.velocity.x.is_positive())
+                && (dy.is_sign_positive() != hail_stone.velocity.y.is_positive())
+            {
+                print!(" Crossed in the past");
+                continue;
+            }
+
+            // check if intersection is within area
+            if x0 > xy_min && x0 < xy_max && y0 > xy_min && y0 < xy_max {
+                score += 1;
+                print!(" inside");
+            }
+        }
+    }
+    println!();
+    println!("Score: {score}");
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::HailStone;
+
+    #[test]
+    fn test1() {
+        let input = include_str!("../example.txt");
+        let lines: Vec<&str> = input.lines().collect();
+        let hail_stone = HailStone::from_line(lines[0]);
+        let hail_stone2 = HailStone::from_line(lines[1]);
+
+        let result = hail_stone.check_intersection(&hail_stone2);
+        assert_eq!(result, Some((14.0 + 1. / 3., 15. + 1. / 3.)));
+    }
+    #[test]
+    fn test2() {
+        let input = include_str!("../example.txt");
+        let lines: Vec<&str> = input.lines().collect();
+        let hail_stone = HailStone::from_line(lines[0]);
+        let hail_stone2 = HailStone::from_line(lines[2]);
+
+        let result = hail_stone.check_intersection(&hail_stone2);
+        assert_eq!(result, Some((11.0 + 2. / 3., 16. + 2. / 3.)));
+    }
+    #[test]
+    fn test3() {
+        let input = include_str!("../example.txt");
+        let lines: Vec<&str> = input.lines().collect();
+        let hail_stone = HailStone::from_line(lines[0]);
+        let hail_stone2 = HailStone::from_line(lines[3]);
+
+        let result = hail_stone.check_intersection(&hail_stone2);
+        assert_eq!(result, Some((6.2, 19.4)));
+    }
+    #[test]
+    fn test4() {
+        let input = include_str!("../example.txt");
+        let lines: Vec<&str> = input.lines().collect();
+        let hail_stone = HailStone::from_line(lines[1]);
+        let hail_stone2 = HailStone::from_line(lines[2]);
+
+        let result = hail_stone.check_intersection(&hail_stone2);
+        assert_eq!(result, None);
+    }
+    #[test]
+    fn test5() {
+        let input = include_str!("../example.txt");
+        let lines: Vec<&str> = input.lines().collect();
+        let hail_stone = HailStone::from_line(lines[1]);
+        let hail_stone2 = HailStone::from_line(lines[3]);
+
+        let result = hail_stone.check_intersection(&hail_stone2);
+        assert_eq!(result, Some((-6., -5.)));
+    }
+    #[test]
+    fn test6() {
+        let input = include_str!("../example.txt");
+        let lines: Vec<&str> = input.lines().collect();
+        let hail_stone = HailStone::from_line(lines[2]);
+        let hail_stone2 = HailStone::from_line(lines[3]);
+
+        let result = hail_stone.check_intersection(&hail_stone2);
+        assert_eq!(result, Some((-2., 3.)));
+    }
+    #[test]
+    fn test7() {
+        let input = include_str!("../example.txt");
+        let lines: Vec<&str> = input.lines().collect();
+        let hail_stone = HailStone::from_line(lines[2]);
+        let hail_stone2 = HailStone::from_line(lines[4]);
+
+        let result = hail_stone.check_intersection(&hail_stone2);
+        assert_eq!(result, Some((19., 24.)));
     }
 }

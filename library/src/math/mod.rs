@@ -1,10 +1,14 @@
-use num::zero;
+use num::{zero, one};
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 // Find GCD
 pub fn gcd<T>(mut a: T, mut b: T) -> T
 where
-    T: Eq + std::ops::Rem<Output = T> + PartialOrd + TryFrom<u64> + Copy,
+    T: PartialEq
+    + std::ops::Rem<Output = T>
+    + PartialOrd
+    + Copy
+    + num::One,
 {
     if a == b {
         return a;
@@ -14,7 +18,7 @@ where
         a = b;
         b = temp;
     }
-    while b > T::try_from(0).ok().unwrap() {
+    while b > one() {
         let temp = a;
         a = b;
         b = temp % b;
@@ -30,7 +34,8 @@ where
         + Copy
         + From<u64>
         + std::ops::Div
-        + std::ops::Mul<<T as std::ops::Div>::Output, Output = T>,
+        + std::ops::Mul<<T as std::ops::Div>::Output, Output = T>
+        + num::One,
 {
     return a * (b / gcd(a, b));
 }
