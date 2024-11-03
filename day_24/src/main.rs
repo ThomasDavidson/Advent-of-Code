@@ -49,7 +49,6 @@ impl HailStone {
         // y = mx+b
         // b = y - mx
         let b = self.position.y as f32 - m * self.position.x as f32;
-        println!("y={m}x+{b}");
 
         // ax+by+c=0
         let m_dec = match m == m.floor() {
@@ -79,9 +78,7 @@ impl HailStone {
         }
 
         let (a1, b1, c1) = self.get_equation();
-        println!("a1 {a1} b1 {b1} c1 {c1} ");
         let (a2, b2, c2) = other.get_equation();
-        println!("a2 {a2} b2 {b2} c2 {c2} ");
 
         let y0 = (b1 * c2 - b2 * c1) as f32 / (a1 * b2 - a2 * b1) as f32;
         let x0 = (c1 * a2 - c2 * a1) as f32 / (b2 * a1 - a2 * b1) as f32;
@@ -106,7 +103,6 @@ impl HailStorm {
 
 fn main() {
     let input = include_str!("../example.txt");
-    println!("{input}");
 
     let storm = HailStorm::from_str(input);
 
@@ -128,37 +124,27 @@ fn main() {
                 continue;
             }
 
-            println!();
-            println!("{:?}", hail_stone);
-            println!("{:?}", hail_stone2);
             let (x0, y0) = match hail_stone.check_intersection(hail_stone2) {
                 None => continue,
                 Some(xy0) => xy0,
             };
 
-            print!("x0 {x0}, y0 {y0}");
             // check if the intersection has already happened
             let (dx, dy) = (
                 x0 - hail_stone.position.x as f32,
                 y0 - hail_stone.position.y as f32,
             );
-            // print!(" dx {dx}, dy {dy}");
-            // print!(" x {}, y {}", dx.is_sign_positive() == hail_stone.velocity.x.is_positive(), dy.is_sign_positive() == hail_stone.velocity.y.is_positive());
-            if (dx.is_sign_positive() != hail_stone.velocity.x.is_positive())
-                && (dy.is_sign_positive() != hail_stone.velocity.y.is_positive())
-            {
-                print!(" Crossed in the past");
+
+            if dx / dy != hail_stone.velocity.x as f32 / hail_stone.velocity.y as f32 {
                 continue;
             }
 
             // check if intersection is within area
             if x0 > xy_min && x0 < xy_max && y0 > xy_min && y0 < xy_max {
                 score += 1;
-                print!(" inside");
             }
         }
     }
-    println!();
     println!("Score: {score}");
 }
 
