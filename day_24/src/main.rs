@@ -71,17 +71,14 @@ impl HailStone {
     }
 
     fn check_intersection(&self, other: &Self) -> Option<(f64, f64)> {
-        let m1 = self.velocity.y as f64 / self.velocity.x as f64;
-        let m2 = other.velocity.y as f64 / other.velocity.x as f64;
-        if m1 == m2 {
-            return None;
-        }
-
         let (a1, b1, c1) = self.get_equation();
         let (a2, b2, c2) = other.get_equation();
 
         let y0 = (b1 * c2 - b2 * c1) as f64 / (a1 * b2 - a2 * b1) as f64;
         let x0 = (c1 * a2 - c2 * a1) as f64 / (b2 * a1 - a2 * b1) as f64;
+        if y0.is_infinite() || x0.is_infinite() {
+            return None;
+        }
         Some((x0, y0))
     }
 }
