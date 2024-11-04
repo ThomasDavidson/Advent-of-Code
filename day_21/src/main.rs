@@ -334,8 +334,6 @@ fn part_2(input: &str, max_steps: u32) -> u64 {
         return part_1(input, max_steps);
     };
 
-    println!("steps: {max_steps}, reduced steps: {reduced_max_steps}");
-
     let gardener = Elf {
         max_steps: reduced_max_steps,
         steps: 0,
@@ -358,13 +356,8 @@ fn part_2(input: &str, max_steps: u32) -> u64 {
 
     let origin = if scores.len() == 5 { 2 } else { 3 };
 
-    println!("Origin: {origin}");
-
     let e1 = scores[origin][origin];
     let e2 = scores[origin - 1][origin];
-
-    println!("e: {e1}");
-    println!("e2: {e2}");
 
     let a1 = scores[origin - 1][origin - 1];
     let a2 = scores[origin - 1][origin + 1];
