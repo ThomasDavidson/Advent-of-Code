@@ -1,6 +1,6 @@
 use colored::Colorize;
 use core::{fmt, str};
-use library::grid::{Coords, Direction};
+use library::grid::{UVec2, Direction};
 use std::{collections::HashMap, fmt::Formatter, time::Instant};
 
 #[derive(PartialEq)]
@@ -59,18 +59,18 @@ impl Forest {
 
         Self { grid }
     }
-    fn get_start(&self) -> Coords<usize> {
+    fn get_start(&self) -> UVec2<usize> {
         for (x, t) in self.grid[0].iter().enumerate() {
             if *t == Tile::Path {
-                return Coords::new(x as usize, 0);
+                return UVec2::new(x as usize, 0);
             }
         }
         panic!("Start cannot be found");
     }
-    fn get_tile(&self, coords: &Coords<usize>) -> &Tile {
+    fn get_tile(&self, coords: &UVec2<usize>) -> &Tile {
         &self.grid[coords.y][coords.x]
     }
-    fn adjacent_tiles(&self, coords: &Coords<usize>, part_1: bool) -> Vec<Coords<usize>> {
+    fn adjacent_tiles(&self, coords: &UVec2<usize>, part_1: bool) -> Vec<UVec2<usize>> {
         let width = self.grid[0].len();
         let height = self.grid.len();
         let tile = self.get_tile(&coords);
@@ -85,7 +85,7 @@ impl Forest {
         .filter(|coords| !coords.check_bounds(width, height))
         .collect()
     }
-    fn adjacent_nodes(&self, coords: &Coords<usize>) -> Vec<(Coords<usize>, usize)> {
+    fn adjacent_nodes(&self, coords: &UVec2<usize>) -> Vec<(UVec2<usize>, usize)> {
         let mut adjacent_nodes = Vec::new();
 
         let height = self.grid.len();
@@ -128,7 +128,7 @@ impl fmt::Display for Forest {
 
 #[derive(Debug)]
 struct NodeMap {
-    nodes: HashMap<Coords<usize>, Vec<(Coords<usize>, usize)>>,
+    nodes: HashMap<UVec2<usize>, Vec<(UVec2<usize>, usize)>>,
 }
 impl NodeMap {
     fn from_forest(forest: &Forest) -> Self {
@@ -176,12 +176,12 @@ impl NodeMap {
 
 #[derive(Debug, Clone)]
 struct Hiker {
-    coords: Coords<usize>,
-    previous: Vec<Coords<usize>>,
+    coords: UVec2<usize>,
+    previous: Vec<UVec2<usize>>,
     score: usize,
 }
 impl Hiker {
-    fn new(start: Coords<usize>) -> Self {
+    fn new(start: UVec2<usize>) -> Self {
         Self {
             coords: start,
             previous: vec![start],
@@ -189,7 +189,7 @@ impl Hiker {
         }
     }
 
-    fn previously_visited(&self, coord: &Coords<usize>) -> bool {
+    fn previously_visited(&self, coord: &UVec2<usize>) -> bool {
         self.previous.contains(coord)
     }
 
@@ -218,7 +218,7 @@ impl Hiker {
     fn print_path(&self, forest: &Forest) {
         for (y, line) in forest.grid.iter().enumerate() {
             for (x, t) in line.iter().enumerate() {
-                let coord = Coords { x, y };
+                let coord = UVec2 { x, y };
 
                 if self.previously_visited(&coord) {
                     let s = format!("{t}").green();
