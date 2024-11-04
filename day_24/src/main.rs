@@ -1,44 +1,15 @@
-use itertools::Itertools;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Vec3D {
-    x: i128,
-    y: i128,
-    z: i128,
-}
-impl Vec3D {
-    fn from_str(str: &str) -> Self {
-        let (x, y, z) = str
-            .split(",")
-            .map(|str| str.split_whitespace().collect::<String>())
-            .map(|str| str.parse().unwrap())
-            .collect_tuple()
-            .unwrap();
-
-        Self { x, y, z }
-    }
-}
-impl std::ops::Sub for Vec3D {
-    type Output = Self;
-    fn sub(self, rhs: Vec3D) -> Self::Output {
-        Self {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-            z: self.z - rhs.z,
-        }
-    }
-}
+use library::grid::Vec3;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct HailStone {
-    position: Vec3D,
-    velocity: Vec3D,
+    position: Vec3<i128>,
+    velocity: Vec3<i128>,
 }
 impl HailStone {
     fn from_line(line: &str) -> Self {
         let (position_str, velocity_str) = line.split_once(" @ ").unwrap();
-        let position = Vec3D::from_str(position_str);
-        let velocity = Vec3D::from_str(velocity_str);
+        let position: Vec3<i128> = Vec3::from_str(position_str).unwrap();
+        let velocity: Vec3<i128> = Vec3::from_str(velocity_str).unwrap();
         Self { position, velocity }
     }
     fn get_equation(&self) -> (i128, i128, i128) {

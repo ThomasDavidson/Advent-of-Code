@@ -1,7 +1,7 @@
+use itertools::Itertools;
 use num::{one, zero, One, Zero};
 use std::{
-    ops::{Add, Neg},
-    usize,
+    fmt::Debug, ops::{Add, Neg, Sub}, str::FromStr, usize
 };
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DirectionFilter {
@@ -143,22 +143,22 @@ impl GridState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Coords<T> {
+pub struct UVec2<T> {
     pub x: T,
     pub y: T,
 }
 
-impl<T: PartialOrd> Coords<T> {
+impl<T: PartialOrd> UVec2<T> {
     pub fn new(x: T, y: T) -> Self {
-        Coords { x, y }
+        UVec2 { x, y }
     }
     pub fn check_bounds(&self, width: T, height: T) -> bool {
         width <= self.x || height <= self.y
     }
 }
 
-impl Add<Direction> for Coords<usize> {
-    type Output = Result<Coords<usize>, &'static str>;
+impl Add<Direction> for UVec2<usize> {
+    type Output = Result<UVec2<usize>, &'static str>;
 
     fn add(self, direction: Direction) -> Self::Output {
         let Ok(x) = isize::try_from(self.x) else {
@@ -180,5 +180,77 @@ impl Add<Direction> for Coords<usize> {
         let result = Self { x: new_x, y: new_y };
 
         Ok(result)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Vec2<T> {
+    pub x: T,
+    pub y: T,
+}
+
+impl<T: PartialOrd> Vec2<T> {
+    pub fn new(x: T, y: T) -> Self {
+        Vec2 { x, y }
+    }
+    pub fn check_bounds(&self, width: T, height: T) -> bool {
+        width <= self.x || height <= self.y
+    }
+}
+
+impl<T: Neg<Output = T> + Add + Zero + One> Add<Direction> for Vec2<T> {
+    type Output = Vec2<T>;
+    fn add(self, direction: Direction) -> Self::Output {
+        let (offset_x, offset_y): (T, T) = Direction::get_translation(direction);
+
+        let result = Self {
+            x: self.x + offset_x,
+            y: self.y + offset_y,
+        };
+
+        result
+    }
+}
+impl<T: Add<Output = T>> Add<Vec2<T>> for Vec2<T> {
+    type Output = Vec2<T>;
+    fn add(self, other: Vec2<T>) -> Self::Output {
+        let result = Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        };
+
+        result
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Vec3<T> {
+    pub x: T,
+    pub y: T,
+    pub z: T,
+}
+impl<T: FromStr> Vec3<T> {
+    pub fn from_str(str: &str) -> Option<Self>
+    where
+        <T as FromStr>::Err: Debug,
+    {
+        let (x, y, z) = str
+            .split(",")
+            .map(|str| str.split_whitespace().collect::<String>())
+            .map(|str| str.parse().unwrap())
+            .collect_tuple()
+            .unwrap();
+
+        Some(Self { x, y, z })
+    }
+}
+impl<T: Sub<Output = T>> Sub for Vec3<T> {
+    type Output = Self;
+    fn sub(self, rhs: Vec3<T>) -> Self::Output {
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
     }
 }
