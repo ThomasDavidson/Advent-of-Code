@@ -2,9 +2,9 @@ use itertools::Itertools;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Vec3D {
-    x: i64,
-    y: i64,
-    z: i64,
+    x: i128,
+    y: i128,
+    z: i128,
 }
 impl Vec3D {
     fn from_str(str: &str) -> Self {
@@ -41,7 +41,7 @@ impl HailStone {
         let velocity = Vec3D::from_str(velocity_str);
         Self { position, velocity }
     }
-    fn get_equation(&self) -> (i64, i64, i64) {
+    fn get_equation(&self) -> (i128, i128, i128) {
         // new test
         let a = -self.velocity.x;
         let b = self.velocity.y;
