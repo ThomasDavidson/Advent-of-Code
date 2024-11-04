@@ -1,6 +1,6 @@
 use crate::Tile::{GardenPlot, Rocks, Start};
 use colored::Colorize;
-use library::grid::Direction;
+use library::grid::{Direction, Vec2};
 use library::math::{round_to, sawtooth};
 use std::{
     collections::{HashMap, VecDeque},
@@ -42,7 +42,7 @@ impl fmt::Display for Tile {
 #[derive(Debug)]
 struct Garden {
     grid: Vec<Vec<Tile>>,
-    steps: HashMap<(i64, i64), u32>,
+    steps: HashMap<Vec2<i64>, u32>,
 }
 
 impl Garden {
@@ -59,11 +59,14 @@ impl Garden {
             steps: HashMap::new(),
         }
     }
-    fn find_start(&self) -> (i64, i64) {
+    fn find_start(&self) -> Vec2<i64> {
         for (y, line) in self.grid.iter().enumerate() {
             for (x, tile) in line.iter().enumerate() {
                 if *tile == Start {
-                    return (x as i64, y as i64);
+                    return Vec2 {
+                        x: x as i64,
+                        y: y as i64,
+                    };
                 }
             }
         }
@@ -77,14 +80,13 @@ impl Garden {
         self.grid.len()
     }
 
-    fn get_tile(&self, coords: (i64, i64)) -> (usize, usize) {
+    fn get_tile(&self, coords: Vec2<i64>) -> (usize, usize) {
         let width = self.width();
         let height = self.height();
-        let (x, y) = coords;
 
         // uses sawtooth to get tile in infinitly expanding map
-        let index_x = sawtooth(x, width as i64);
-        let index_y = sawtooth(y, height as i64);
+        let index_x = sawtooth(coords.x, width as i64);
+        let index_y = sawtooth(coords.y, height as i64);
         (index_y as usize, index_x as usize)
     }
 
@@ -116,16 +118,16 @@ impl Garden {
         let entries = self
             .steps
             .iter()
-            .filter(move |(k, _v)| k.1 < y_max && k.1 >= y_min && k.0 < x_max && k.0 >= x_min);
+            .filter(move |(k, _v)| k.y < y_max && k.y >= y_min && k.x < x_max && k.x >= x_min);
 
         entries.map(|x| x.1)
     }
     fn print_steps_range(&self, y_max: i64, y_min: i64, x_max: i64, x_min: i64) {
-        let entries: Vec<((i64, i64), u32)> = self
+        let entries: Vec<(Vec2<i64>, u32)> = self
             .steps
             .clone()
             .drain()
-            .filter(move |(k, _v)| k.1 < y_max && k.1 >= y_min && k.0 < x_max && k.0 >= x_min)
+            .filter(move |(k, _v)| k.y < y_max && k.y >= y_min && k.x < x_max && k.x >= x_min)
             .collect();
 
         println!("{:?}", entries)
@@ -135,12 +137,12 @@ impl Garden {
         let width = self.width();
         let height = self.height();
 
-        let steps: Vec<&(i64, i64)> = self.steps.keys().collect::<Vec<_>>();
+        let steps: Vec<&Vec2<i64>> = self.steps.keys().collect::<Vec<_>>();
 
-        let min_x_visited = steps.iter().min_by_key(|f| f.0).unwrap().0;
-        let min_y_visited = steps.iter().min_by_key(|f| f.1).unwrap().1;
-        let max_x_visited = steps.iter().max_by_key(|f| f.0).unwrap().0;
-        let max_y_visited = steps.iter().max_by_key(|f| f.1).unwrap().1;
+        let min_x_visited = steps.iter().min_by_key(|f| f.x).unwrap().x;
+        let min_y_visited = steps.iter().min_by_key(|f| f.y).unwrap().y;
+        let max_x_visited = steps.iter().max_by_key(|f| f.x).unwrap().x;
+        let max_y_visited = steps.iter().max_by_key(|f| f.y).unwrap().y;
 
         let min_x_step = round_to(min_x_visited, -(width as i64));
         let min_y_step = round_to(min_y_visited, -(height as i64));
@@ -207,7 +209,7 @@ impl Garden {
     }
 
     fn find_next(&mut self, elf: Elf) -> VecDeque<Elf> {
-        let (x, y) = elf.coords;
+        let coords = elf.coords;
 
         if elf.steps == elf.max_steps {
             return VecDeque::new();
@@ -215,13 +217,12 @@ impl Garden {
 
         let directions = Direction::MOVE;
 
-        let mut coords = VecDeque::new();
+        let mut coords_list = VecDeque::new();
 
         for direction in directions {
-            let (x_offset, y_offset) = direction.get_translation();
-            let (next_x, next_y) = ((x + x_offset as i64), (y + y_offset as i64));
+            let next_coords = coords + direction;
 
-            let (index_x, index_y) = self.get_tile((next_x, next_y));
+            let (index_x, index_y) = self.get_tile(next_coords);
             let next_tile = &self.grid[index_x][index_y];
 
             if *next_tile == Rocks {
@@ -229,7 +230,7 @@ impl Garden {
             }
 
             let new_elf = Elf {
-                coords: (next_x, next_y),
+                coords: next_coords,
                 steps: elf.steps + 1,
                 ..elf
             };
@@ -238,32 +239,32 @@ impl Garden {
                 continue;
             }
 
-            coords.push_front(new_elf);
+            coords_list.push_front(new_elf);
         }
-        coords
+        coords_list
     }
 }
 
 impl fmt::Display for Garden {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let steps: Vec<&(i64, i64)> = self.steps.keys().collect::<Vec<_>>();
-        let min_x_visited = steps.iter().min_by_key(|f| f.0).unwrap().0 - 10;
-        let min_y_visited = steps.iter().min_by_key(|f| f.1).unwrap().1 - 10;
-        let max_x_visited = steps.iter().max_by_key(|f| f.0).unwrap().0 + 10;
-        let max_y_visited = steps.iter().max_by_key(|f| f.1).unwrap().1 + 10;
+        let steps: Vec<&Vec2<i64>> = self.steps.keys().collect::<Vec<_>>();
+        let min_x_visited = steps.iter().min_by_key(|f| f.x).unwrap().x - 10;
+        let min_y_visited = steps.iter().min_by_key(|f| f.y).unwrap().y - 10;
+        let max_x_visited = steps.iter().max_by_key(|f| f.x).unwrap().x + 10;
+        let max_y_visited = steps.iter().max_by_key(|f| f.y).unwrap().y + 10;
 
         for y in min_y_visited..max_y_visited {
             for x in min_x_visited..max_x_visited {
-                let (index_x, index_y) = self.get_tile((x, y));
+                let (index_x, index_y) = self.get_tile(Vec2 { x, y });
                 let tile = &self.grid[index_x][index_y];
                 let elf = Elf {
                     max_steps: 0,
                     steps: 0,
-                    coords: (x as i64, y as i64),
+                    coords: Vec2 { x, y },
                 };
 
                 let s = if let Some(steps) = self.steps.get(&elf.coords) {
-                        if steps % 2 == 0 {
+                    if steps % 2 == 0 {
                         format!("E")
                     } else {
                         format!("O")
@@ -292,7 +293,7 @@ impl fmt::Display for Garden {
 struct Elf {
     max_steps: u32,
     steps: u32,
-    coords: (i64, i64),
+    coords: Vec2<i64>,
 }
 
 fn part_1(input: &str, max_steps: u32) -> u64 {
