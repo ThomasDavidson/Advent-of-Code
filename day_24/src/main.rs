@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use library::math::gcd;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Vec3D {
@@ -43,31 +42,12 @@ impl HailStone {
         Self { position, velocity }
     }
     fn get_equation(&self) -> (i64, i64, i64) {
-        // m = y / x
-        let m = self.velocity.y as f64 / self.velocity.x as f64;
+        // new test
+        let a = -self.velocity.x;
+        let b = self.velocity.y;
+        let c = self.velocity.x * self.position.y - self.velocity.y * self.position.x;
 
-        // y = mx+b
-        // b = y - mx
-        let b = self.position.y as f64 - m * self.position.x as f64;
-
-        // ax+by+c=0
-        let m_dec = match m == m.floor() {
-            true => 1.0,
-            false => m - m.floor(),
-        };
-        let m_miltiplier = 1.0 / m_dec;
-
-        let b_dec = match b == b.floor() {
-            true => 1.0,
-            false => b - b.floor(),
-        };
-        let b_miltiplier = 1.0 / b_dec;
-
-        let a_standard = gcd(m_miltiplier, b_miltiplier);
-        let b_standard = m * a_standard;
-        let c_standard = b * a_standard;
-
-        (-a_standard as i64, b_standard as i64, c_standard as i64)
+        (a, b, c)
     }
 
     fn check_intersection(&self, other: &Self) -> Option<(f64, f64)> {
