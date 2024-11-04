@@ -1,4 +1,5 @@
 use library::grid::Vec3;
+use std::time::Instant;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct HailStone {
@@ -48,10 +49,7 @@ impl HailStorm {
         Self { hail_stones }
     }
 }
-
-fn main() {
-    let input = include_str!("../input.txt");
-
+fn part_1(input: &str) -> u64 {
     let storm = HailStorm::from_str(input);
 
     let mut score = 0;
@@ -103,7 +101,16 @@ fn main() {
             score += 1;
         }
     }
-    println!("Score: {score}");
+    score
+}
+
+fn main() {
+    let input = include_str!("../input.txt");
+
+    let start: Instant = Instant::now();
+    let part_1_answer = part_1(&input);
+    let duration = start.elapsed();
+    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
 }
 
 #[cfg(test)]
