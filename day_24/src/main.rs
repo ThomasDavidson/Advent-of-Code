@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use library::grid::Vec3;
 use std::{fs, time::Instant};
 
@@ -56,6 +57,9 @@ impl HailStone {
 
         true
     }
+    fn get_position_at_time(&self, time: f64) -> Vec3<f64> {
+        Vec3::<f64>::from(self.position) + Vec3::<f64>::from(self.velocity) * time
+    }
 }
 
 #[derive(Debug)]
@@ -79,34 +83,33 @@ fn part_1(input: &str) -> u64 {
 
     let (xy_min, xy_max) = XY_MIN_MAX;
 
-    let mut min_j = 0;
-    for hail_stone in storm.hail_stones.iter() {
-        min_j += 1;
-        for (_j, hail_stone2) in storm
-            .hail_stones
-            .iter()
-            .enumerate()
-            .filter(|hs| hs.1 != hail_stone && min_j <= hs.0)
-        {
-            let (x0, y0) = match hail_stone.check_intersection_xy(hail_stone2) {
-                None => continue,
-                Some(xy0) => xy0,
-            };
+    for hail_stones in storm
+        .hail_stones
+        .iter()
+        .combinations(2)
+        .filter(|hs| hs[0] != hs[1])
+    {
+        let hail_stone = hail_stones[0];
+        let hail_stone2 = hail_stones[1];
 
-            if !hail_stone.future_intersection_xy((x0, y0)) {
-                continue;
-            }
+        let (x0, y0) = match hail_stone.check_intersection_xy(hail_stone2) {
+            None => continue,
+            Some(xy0) => xy0,
+        };
 
-            if !hail_stone2.future_intersection_xy((x0, y0)) {
-                continue;
-            }
-
-            // check if intersection is within area
-            if (x0 < xy_min || x0 > xy_max) || (y0 < xy_min || y0 > xy_max) {
-                continue;
-            }
-            score += 1;
+        if !hail_stone.future_intersection_xy((x0, y0)) {
+            continue;
         }
+
+        if !hail_stone2.future_intersection_xy((x0, y0)) {
+            continue;
+        }
+
+        // check if intersection is within area
+        if (x0 < xy_min || x0 > xy_max) || (y0 < xy_min || y0 > xy_max) {
+            continue;
+        }
+        score += 1;
     }
     score
 }
