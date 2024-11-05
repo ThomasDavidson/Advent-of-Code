@@ -1,5 +1,15 @@
 use library::grid::Vec3;
-use std::time::Instant;
+use std::{fs, time::Instant};
+
+const EXAMPLE: bool = true;
+const INPUT_FILE: &'static str = match EXAMPLE {
+    true => "./example.txt",
+    false => "./input.txt",
+};
+const XY_MIN_MAX: (f64, f64) = match EXAMPLE {
+    true => (7.0, 27.0),
+    false => (200000000000000.0, 400000000000000.0),
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct HailStone {
@@ -54,8 +64,7 @@ fn part_1(input: &str) -> u64 {
 
     let mut score = 0;
 
-    let xy_min = 200000000000000.0;
-    let xy_max = 400000000000000.0;
+    let (xy_min, xy_max) = XY_MIN_MAX;
 
     let mut min_j = 0;
     for hail_stone in storm.hail_stones.iter() {
@@ -105,7 +114,7 @@ fn part_1(input: &str) -> u64 {
 }
 
 fn main() {
-    let input = include_str!("../input.txt");
+    let input = fs::read_to_string(INPUT_FILE).expect("Failed to read the file");
 
     let start: Instant = Instant::now();
     let part_1_answer = part_1(&input);
