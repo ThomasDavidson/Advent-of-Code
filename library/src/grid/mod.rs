@@ -1,7 +1,10 @@
 use itertools::Itertools;
 use num::{one, zero, One, Zero};
 use std::{
-    fmt::Debug, ops::{Add, Neg, Sub}, str::FromStr, usize
+    fmt::Debug,
+    ops::{Add, Mul, Neg, Sub},
+    str::FromStr,
+    usize,
 };
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DirectionFilter {
@@ -223,7 +226,7 @@ impl<T: Add<Output = T>> Add<Vec2<T>> for Vec2<T> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Vec3<T> {
     pub x: T,
     pub y: T,
@@ -251,6 +254,53 @@ impl<T: Sub<Output = T>> Sub for Vec3<T> {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
             z: self.z - rhs.z,
+        }
+    }
+}
+
+impl<T: Add<Output = T>> Add for Vec3<T> {
+    type Output = Self;
+    fn add(self, rhs: Vec3<T>) -> Self::Output {
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
+    }
+}
+
+impl<T: Mul<Output = T>> Mul for Vec3<T> {
+    type Output = Self;
+
+    // Required method
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+            z: self.z * rhs.z,
+        }
+    }
+}
+
+impl<T: Mul<Output = T> + Copy> Mul<T> for Vec3<T> {
+    type Output = Self;
+
+    // Required method
+    fn mul(self, rhs: T) -> Self::Output {
+        Self {
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
+        }
+    }
+}
+
+impl From<Vec3<i128>> for Vec3<f64> {
+    fn from(value: Vec3<i128>) -> Self {
+        Self {
+            x: value.x as f64,
+            y: value.y as f64,
+            z: value.z as f64,
         }
     }
 }

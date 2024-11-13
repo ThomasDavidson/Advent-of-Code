@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use library::grid::Vec3;
+use nalgebra::{Matrix6, Matrix6x1, RowVector6};
 use std::{fs, time::Instant};
 
 const EXAMPLE: bool = false;
@@ -57,9 +58,6 @@ impl HailStone {
 
         true
     }
-    fn get_position_at_time(&self, time: f64) -> Vec3<f64> {
-        Vec3::<f64>::from(self.position) + Vec3::<f64>::from(self.velocity) * time
-    }
 }
 
 #[derive(Debug)]
@@ -76,12 +74,12 @@ impl HailStorm {
         Self { hail_stones }
     }
 }
-fn part_1(input: &str) -> u64 {
+fn part_1(input: &str, xy_range: (f64, f64)) -> u64 {
     let storm = HailStorm::from_str(input);
 
     let mut score = 0;
 
-    let (xy_min, xy_max) = XY_MIN_MAX;
+    let (xy_min, xy_max) = xy_range;
 
     for hail_stones in storm
         .hail_stones
@@ -114,18 +112,63 @@ fn part_1(input: &str) -> u64 {
     score
 }
 
+// todo improve answer for any input
+fn part_2(input: &str) -> i128 {
+    let storm = HailStorm::from_str(input);
+
+    let p0: Vec3<f64> = storm.hail_stones[0].position.clone().into();
+    let p1: Vec3<f64> = storm.hail_stones[1].position.clone().into();
+    let p2: Vec3<f64> = storm.hail_stones[6].position.clone().into();
+    let v0: Vec3<f64> = storm.hail_stones[0].velocity.clone().into();
+    let v1: Vec3<f64> = storm.hail_stones[1].velocity.clone().into();
+    let v2: Vec3<f64> = storm.hail_stones[6].velocity.clone().into();
+
+    let b = Matrix6x1::from_row_slice(&[
+        ((p0.y as i128 * v0.x as i128 - p1.y as i128 * v1.x as i128)
+            - (p0.x as i128 * v0.y as i128 - p1.x as i128 * v1.y as i128)) as f64,
+        ((p0.y as i128 * v0.x as i128 - p2.y as i128 * v2.x as i128)
+            - (p0.x as i128 * v0.y as i128 - p2.x as i128 * v2.y as i128)) as f64,
+        ((p0.z as i128 * v0.x as i128 - p1.z as i128 * v1.x as i128)
+            - (p0.x as i128 * v0.z as i128 - p1.x as i128 * v1.z as i128)) as f64,
+        ((p0.z as i128 * v0.x as i128 - p2.z as i128 * v2.x as i128)
+            - (p0.x as i128 * v0.z as i128 - p2.x as i128 * v2.z as i128)) as f64,
+        ((p0.z as i128 * v0.y as i128 - p1.z as i128 * v1.y as i128)
+            - (p0.y as i128 * v0.z as i128 - p1.y as i128 * v1.z as i128)) as f64,
+        ((p0.z as i128 * v0.y as i128 - p2.z as i128 * v2.y as i128)
+            - (p0.y as i128 * v0.z as i128 - p2.y as i128 * v2.z as i128)) as f64,
+    ]);
+
+    let a = Matrix6::from_rows(&[
+        RowVector6::new(v1.y - v0.y, v0.x - v1.x, 0.0, p0.y - p1.y, p1.x - p0.x, 0.0),
+        RowVector6::new(v2.y - v0.y, v0.x - v2.x, 0.0, p0.y - p2.y, p2.x - p0.x, 0.0),
+        RowVector6::new(v1.z - v0.z, 0.0, v0.x - v1.x, p0.z - p1.z, 0.0, p1.x - p0.x),
+        RowVector6::new(v2.z - v0.z, 0.0, v0.x - v2.x, p0.z - p2.z, 0.0, p2.x - p0.x),
+        RowVector6::new(0.0, v1.z - v0.z, v0.y - v1.y, 0.0, p0.z - p1.z, p1.y - p0.y),
+        RowVector6::new(0.0, v2.z - v0.z, v0.y - v2.y, 0.0, p0.z - p2.z, p2.y - p0.y),
+    ]);
+
+    let r = a.lu().solve(&b).unwrap();
+    let answer: f64 = r[0] + r[1] + r[2];
+    answer.round() as i128
+}
+
 fn main() {
     let input = fs::read_to_string(INPUT_FILE).expect("Failed to read the file");
 
     let start: Instant = Instant::now();
-    let part_1_answer = part_1(&input);
+    let part_1_answer = part_1(&input, XY_MIN_MAX);
     let duration = start.elapsed();
     println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
+
+    let start: Instant = Instant::now();
+    let part_2_answer = part_2(&input);
+    let duration = start.elapsed();
+    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::HailStone;
+    use crate::{part_1, part_2, HailStone};
 
     #[test]
     fn test1() {
@@ -196,5 +239,19 @@ mod tests {
 
         let result = hail_stone.check_intersection_xy(&hail_stone2);
         assert_eq!(result, Some((19., 24.)));
+    }
+    #[test]
+    fn test_part_1_example() {
+        let input = include_str!("../example.txt");
+        let result = part_1(input, (7.0, 27.0));
+
+        assert_eq!(result, 2);
+    }
+    #[test]
+    fn test_part_2_example() {
+        let input = include_str!("../example.txt");
+        let result = part_2(input);
+
+        assert_eq!(result, 47);
     }
 }
