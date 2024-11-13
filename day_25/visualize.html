@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v6.js"></script>
+
+<!-- upload file -->
+
+<body>
+  <form name="uploadForm">
+    <label for="puzzle"></label>
+    <input id="puzzle" type="file" multiple />
+  </form>
+
+
+  <!-- Create a div where the graph will take place -->
+  <div id="my_dataviz"></div>
+
+  <script>
+    // get file
+    const puzzle = document.getElementById("puzzle");
+    puzzle.addEventListener("change", handleFiles, false);
+
+
+
+    var chart = { nodes: [], links: [] }
+
+
+
+    function init_id(chart, label) {
+      let index = chart.nodes.map((node) => node.name).indexOf(label)
+      if (index != -1) {
+        return chart.nodes[index].id
+      }
+      let id = chart.next_id
+      chart.nodes.push({ "id": id, name: label })
+
+      chart.next_id = chart.next_id + 1
+      return id
+    }
+
+    function handleFiles() {
+      var new_chart
+
+      let file = puzzle.files[0]
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        let str = evt.target.result;
+
+        let lines = str.split(/\r?\n|\r|\n/g);
+
+        var next_id = 0;
+        let new_chart = { nodes: [], links: [], next_id: 0 }
+
+        for (const line of lines) {
+          let line_split = line.split(": ")
+          let component = line_split[0]
+          let links = line_split[1].split(" ")
+
+          let component_id = init_id(new_chart, component)
+
+          for (const link of links) {
+            let link_id = init_id(new_chart, link)
+            new_chart.links.push({ "source": component_id, "target": link_id })
+          }
+
+        };
+
+        render_chart(new_chart)
+      };
+      reader.readAsText(file);
+
+    }
+
+    // chart
+    // set the dimensions and margins of the graph
+    const margin = { top: 10, right: 30, bottom: 30, left: 40 },
+      width = 800 - margin.left - margin.right,
+      height = 800 - margin.top - margin.bottom;
+
+    // append the svg object to the body of the page
+    const svg = d3.select("#my_dataviz")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform",
+        `translate(${margin.left}, ${margin.top})`);
+
+    d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/data_network.json").then((data) => render_chart(data));
+
+    function render_chart(data) {
+      // Initialize the links
+      const link = svg
+        .selectAll("line")
+        .data(data.links)
+        .join("line")
+        .style("stroke", "#aaa")
+
+      // Initialize the nodes
+      const node = svg
+        .selectAll("circle")
+        .data(data.nodes)
+        .join("circle")
+        .attr("r", 25 / Math.log(data.nodes.length))
+        .style("fill", "#69b3a2")
+
+      // Let's list the force we wanna apply on the network
+      const simulation = d3.forceSimulation(data.nodes)                 // Force algorithm is applied to data.nodes
+        .force("link", d3.forceLink()                               // This force provides links between nodes
+          .id(function (d) { return d.id; })                     // This provide  the id of a node
+          .links(data.links)                                    // and this the list of links
+        )
+        .force("charge", d3.forceManyBody().strength(-5000 / data.nodes.length))         // This adds repulsion between nodes. Play with the -400 for the repulsion strength
+        .force("center", d3.forceCenter(width / 2, height / 2))     // This force attracts nodes to the center of the svg area
+        .on("end", ticked);
+
+      // This function is run at each iteration of the force algorithm, updating the nodes position.
+      function ticked() {
+        link
+          .attr("x1", function (d) { return d.source.x; })
+          .attr("y1", function (d) { return d.source.y; })
+          .attr("x2", function (d) { return d.target.x; })
+          .attr("y2", function (d) { return d.target.y; });
+
+        node
+          .attr("cx", function (d) { return d.x; })
+          .attr("cy", function (d) { return d.y; });
+      }
+
+    }
+  </script>
