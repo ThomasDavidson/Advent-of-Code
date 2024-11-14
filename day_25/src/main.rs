@@ -1,4 +1,5 @@
 use core::fmt;
+use rand::prelude::*;
 use std::collections::HashMap;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
@@ -54,12 +55,25 @@ impl Apparatus {
         }
         new_self
     }
-    fn adjacent_components(&self, component: &Component) -> Vec<Component> {
+
+    fn get_components(&self) -> Vec<Component> {
+        self.clone().components.into_keys().collect()
+    }
+
+    fn adjacent_components(&self, component: &Component) -> &Vec<Component> {
+        self.components.get(component).unwrap()
+    }
+
+    fn adjacent_components_mut(&mut self, component: &Component) -> &mut Vec<Component> {
+        self.components.get_mut(component).unwrap()
+    }
+
+    fn connected_components(&self, component: &Component) -> Vec<Component> {
         let mut output = vec![component];
         let mut traverse = vec![component];
 
         while let Some(node) = traverse.pop() {
-            let nodes = self.components.get(node).unwrap();
+            let nodes = self.adjacent_components(node);
             for adjacent in nodes {
                 if output.contains(&&adjacent) {
                     continue;
@@ -71,24 +85,56 @@ impl Apparatus {
         output.into_iter().map(|n| n.to_owned()).collect()
     }
 
-    fn connected_components(&self, component: Component) -> Vec<Component> {
-        !todo!()
-    }
     fn remove_wire(&mut self, component1: &Component, component2: &Component) {
         {
-            let connection1 = self.components.get_mut(&component1).unwrap();
+            let connection1 = self.adjacent_components_mut(&component1);
             let pos1 = connection1.iter().position(|c| c == component2).unwrap();
             connection1.remove(pos1);
         }
 
         {
-            let connection2 = self.components.get_mut(&component2).unwrap();
+            let connection2 = self.adjacent_components_mut(&component2);
             let pos2 = connection2.iter().position(|c| c == component1).unwrap();
             connection2.remove(pos2);
         }
     }
-    fn merge_components(&mut self, component1: &Component, component2: &Component) {
-        !todo!()
+    fn add_wire(&mut self, component1: &Component, component2: &Component) {
+        {
+            let connection1 = self.adjacent_components_mut(&component1);
+            connection1.push(component2.to_owned());
+        }
+
+        {
+            let connection2 = self.adjacent_components_mut(&component2);
+            connection2.push(component1.to_owned());
+        }
+    }
+
+    fn merge_components(&mut self, source: &Component, desination: &Component) {
+        // move connections to destination to source
+        for adjacent_source in self.adjacent_components(source).to_owned() {
+            self.remove_wire(&adjacent_source, source);
+            if adjacent_source != *desination {
+                self.add_wire(&adjacent_source, desination);
+            }
+        }
+    }
+}
+
+impl fmt::Display for Apparatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (source, destinations) in self.components.iter() {
+            if destinations.len() == 0 {
+                continue;
+            }
+
+            write!(f, "{}:", source)?;
+            for desination in destinations {
+                write!(f, " {}", desination)?;
+            }
+            writeln!(f)?;
+        }
+        Ok(())
     }
 }
 
@@ -97,15 +143,35 @@ fn main() {
 
     // process input
     let apparatus = Apparatus::from_str(input, true);
+    println!("{apparatus}");
 
     let mut rng = rand::thread_rng();
 
     for _i in 0..100 {
+        let mut apparatus = apparatus.clone();
+        let mut components: Vec<Component> = apparatus.get_components();
+
         for _j in 0..(apparatus.components.len() - 2) {
+            components.shuffle(&mut rng);
             // get random node
+            let source = components.pop().unwrap();
+            // get random connected node
+            let destination = {
+                let adjacent_source = apparatus.adjacent_components(&source);
+                // random index
+                let Some(destination) = adjacent_source.choose(&mut rng) else {
+                    panic!("None adjacent")
+                };
+                destination
+            }
+            .to_owned();
 
             // combine it with random connected code
+            apparatus.merge_components(&source, &destination);
         }
         // check original graph with leftover connections cut
+        println!("{apparatus}");
+
+        println!();
     }
 }
