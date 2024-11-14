@@ -10,6 +10,8 @@
   <form name="uploadForm">
     <label for="puzzle"></label>
     <input id="puzzle" type="file" multiple />
+    <label for="attraction"></label>
+    <input id="attraction" type="number" multiple />
   </form>
 
 
@@ -21,11 +23,7 @@
     const puzzle = document.getElementById("puzzle");
     puzzle.addEventListener("change", handleFiles, false);
 
-
-
     var chart = { nodes: [], links: [] }
-
-
 
     function init_id(chart, label) {
       let index = chart.nodes.map((node) => node.name).indexOf(label)
@@ -66,17 +64,32 @@
 
         };
 
-        render_chart(new_chart)
+        chart = new_chart
+        render_chart(chart)
       };
       reader.readAsText(file);
 
     }
 
+
+    // get node attraction
+    const attraction_input = document.getElementById("attraction");
+    attraction_input.addEventListener("change", handleAttraction, false);
+
+    function handleAttraction() {
+      attraction = attraction_input.valueAsNumber
+      console.log(attraction)
+      render_chart(chart)
+    }
+
+    let attraction = 500
+
+
     // chart
     // set the dimensions and margins of the graph
     const margin = { top: 10, right: 30, bottom: 30, left: 40 },
-      width = 800 - margin.left - margin.right,
-      height = 800 - margin.top - margin.bottom;
+      width = 2000 - margin.left - margin.right,
+      height = 2000 - margin.top - margin.bottom;
 
     // append the svg object to the body of the page
     const svg = d3.select("#my_dataviz")
@@ -89,7 +102,8 @@
 
     d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/data_network.json").then((data) => render_chart(data));
 
-    function render_chart(data) {
+    function render_chart(c_data) {
+      let data = structuredClone(c_data)
       // Initialize the links
       const link = svg
         .selectAll("line")
@@ -111,7 +125,7 @@
           .id(function (d) { return d.id; })                     // This provide  the id of a node
           .links(data.links)                                    // and this the list of links
         )
-        .force("charge", d3.forceManyBody().strength(-5000 / data.nodes.length))         // This adds repulsion between nodes. Play with the -400 for the repulsion strength
+        .force("charge", d3.forceManyBody().strength(-attraction))         // This adds repulsion between nodes. Play with the -400 for the repulsion strength
         .force("center", d3.forceCenter(width / 2, height / 2))     // This force attracts nodes to the center of the svg area
         .on("end", ticked);
 
