@@ -1,8 +1,31 @@
 use core::fmt;
 use rand::prelude::*;
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Instant};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
+struct Link {
+    original: [Component; 2],
+    current: Component,
+}
+impl Link {
+    fn new(source: Component, destination: Component) -> Self {
+        Self {
+            original: [source.clone(), destination.clone()],
+            current: destination.clone(),
+        }
+    }
+}
+impl fmt::Display for Link {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}, {} - {}",
+            self.current, self.original[0], self.original[1]
+        )
+    }
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 struct Component {
     label: [char; 3],
 }
@@ -22,10 +45,10 @@ impl fmt::Display for Component {
 
 #[derive(Debug, Clone)]
 struct Apparatus {
-    components: HashMap<Component, Vec<Component>>,
+    components: HashMap<Component, Vec<Link>>,
 }
 impl Apparatus {
-    fn from_str(input: &str, bidirectional_connections: bool) -> Self {
+    fn from_str(input: &str) -> Self {
         let mut new_self = Self {
             components: HashMap::new(),
         };
@@ -38,17 +61,22 @@ impl Apparatus {
                 .map(|connection_str| Component::from_str(connection_str))
                 .collect();
 
-            new_self.components.insert(component, connections);
+            new_self.components.insert(
+                component,
+                connections
+                    .into_iter()
+                    .map(|connection| Link::new(component, connection))
+                    .collect(),
+            );
         }
-        if bidirectional_connections {
-            // add reverse direction
-            for (key, links) in new_self.components.clone() {
-                for link in links {
-                    match new_self.components.get_mut(&link) {
-                        Some(link_node) => link_node.push(key.clone()),
-                        None => {
-                            new_self.components.insert(link, vec![key.clone()]);
-                        }
+        // add reverse direction
+        for (key, links) in new_self.components.clone() {
+            for link in links {
+                let new_dest = Link::new(link.current, key.clone());
+                match new_self.components.get_mut(&link.current) {
+                    Some(link_node) => link_node.push(new_dest),
+                    None => {
+                        new_self.components.insert(link.current, vec![new_dest]);
                     }
                 }
             }
@@ -60,11 +88,11 @@ impl Apparatus {
         self.clone().components.into_keys().collect()
     }
 
-    fn adjacent_components(&self, component: &Component) -> &Vec<Component> {
+    fn adjacent_components(&self, component: &Component) -> &Vec<Link> {
         self.components.get(component).unwrap()
     }
 
-    fn adjacent_components_mut(&mut self, component: &Component) -> &mut Vec<Component> {
+    fn adjacent_components_mut(&mut self, component: &Component) -> &mut Vec<Link> {
         self.components.get_mut(component).unwrap()
     }
 
@@ -75,11 +103,11 @@ impl Apparatus {
         while let Some(node) = traverse.pop() {
             let nodes = self.adjacent_components(node);
             for adjacent in nodes {
-                if output.contains(&&adjacent) {
+                if output.iter().any(|links| &&adjacent.current == links) {
                     continue;
                 }
-                traverse.push(adjacent);
-                output.push(adjacent);
+                traverse.push(&adjacent.current);
+                output.push(&adjacent.current);
             }
         }
         output.into_iter().map(|n| n.to_owned()).collect()
@@ -88,34 +116,51 @@ impl Apparatus {
     fn remove_wire(&mut self, component1: &Component, component2: &Component) {
         {
             let connection1 = self.adjacent_components_mut(&component1);
-            let pos1 = connection1.iter().position(|c| c == component2).unwrap();
-            connection1.remove(pos1);
+            if let Some(pos1) = connection1.iter().position(|c| c.current == *component2) {
+                connection1.remove(pos1);
+            };
         }
 
         {
             let connection2 = self.adjacent_components_mut(&component2);
-            let pos2 = connection2.iter().position(|c| c == component1).unwrap();
-            connection2.remove(pos2);
+            if let Some(pos2) = connection2.iter().position(|c| c.current == *component1) {
+                connection2.remove(pos2);
+            };
         }
     }
-    fn add_wire(&mut self, component1: &Component, component2: &Component) {
+    fn add_wire(
+        &mut self,
+        component1: &Component,
+        component2: &Component,
+        original: [Component; 2],
+    ) {
         {
             let connection1 = self.adjacent_components_mut(&component1);
-            connection1.push(component2.to_owned());
+            connection1.push(Link {
+                original,
+                current: component2.to_owned(),
+            });
         }
 
         {
             let connection2 = self.adjacent_components_mut(&component2);
-            connection2.push(component1.to_owned());
+            connection2.push(Link {
+                original,
+                current: component1.to_owned(),
+            });
         }
     }
 
     fn merge_components(&mut self, source: &Component, desination: &Component) {
         // move connections to destination to source
         for adjacent_source in self.adjacent_components(source).to_owned() {
-            self.remove_wire(&adjacent_source, source);
-            if adjacent_source != *desination {
-                self.add_wire(&adjacent_source, desination);
+            self.remove_wire(&adjacent_source.current, source);
+            if adjacent_source.current != *desination {
+                self.add_wire(
+                    &adjacent_source.current,
+                    desination,
+                    adjacent_source.original,
+                );
             }
         }
     }
@@ -138,17 +183,14 @@ impl fmt::Display for Apparatus {
     }
 }
 
-fn main() {
-    let input = include_str!("../example.txt");
-
+fn part_1(input: &str) -> usize {
     // process input
-    let apparatus = Apparatus::from_str(input, true);
-    println!("{apparatus}");
+    let orig_apparatus = Apparatus::from_str(input);
 
     let mut rng = rand::thread_rng();
 
     for _i in 0..100 {
-        let mut apparatus = apparatus.clone();
+        let mut apparatus = orig_apparatus.clone();
         let mut components: Vec<Component> = apparatus.get_components();
 
         for _j in 0..(apparatus.components.len() - 2) {
@@ -167,11 +209,59 @@ fn main() {
             .to_owned();
 
             // combine it with random connected code
-            apparatus.merge_components(&source, &destination);
+            apparatus.merge_components(&source, &destination.current);
         }
-        // check original graph with leftover connections cut
-        println!("{apparatus}");
 
-        println!();
+        // get 3 remaining nodes
+        let remaining_nodes: Vec<(Component, Vec<Link>)> = apparatus
+            .components
+            .into_iter()
+            .filter(|c| c.1.len() != 0)
+            .collect();
+        // check original graph with leftover connections cut
+        if remaining_nodes.iter().any(|node| node.1.len() != 3) {
+            continue;
+        }
+        // check if remaining nodes have 3 connections
+
+        for node in &remaining_nodes {
+            print!("{}:", node.0);
+            for n in &node.1 {
+                print!(" {}-{}", n.original[0], n.original[1]);
+            }
+            println!()
+        }
+        let mut test_apparatus = orig_apparatus.clone();
+
+        // get node from each side of the cut
+        let mut test_nodes: Option<[Component; 2]> = None;
+
+        for node in &remaining_nodes {
+            for n in &node.1 {
+                if test_nodes.is_none() {
+                    test_nodes = Some(n.original);
+                }
+                test_apparatus.remove_wire(&n.original[0], &n.original[1]);
+            }
+        }
+
+        let test_nodes = test_nodes.unwrap();
+
+        let side_1_count = test_apparatus.connected_components(&test_nodes[0]).len();
+        let side_2_count = test_apparatus.connected_components(&test_nodes[1]).len();
+
+        if side_1_count != side_2_count {
+            return side_1_count * side_2_count;
+        }
     }
+    panic!("Did not find answer")
+}
+
+fn main() {
+    let input = include_str!("../input.txt");
+
+    let start: Instant = Instant::now();
+    let part_1_answer = part_1(&input);
+    let duration = start.elapsed();
+    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
 }
