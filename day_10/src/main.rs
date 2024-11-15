@@ -11,12 +11,7 @@ fn get_tile_connections(symbol: &char) -> Vec<Direction> {
         '7' => vec![Direction::South, Direction::West],
         'F' => vec![Direction::South, Direction::East],
         '.' => vec![],
-        'S' => vec![
-            Direction::North,
-            Direction::South,
-            Direction::East,
-            Direction::West,
-        ],
+        'S' => Direction::MOVE.to_vec(),
         _ => panic!("above should match all"),
     }
 }
@@ -83,13 +78,8 @@ fn get_next_tile(
         let next_dirs = get_tile_connections(&next_tile);
 
         // switch direction
-        let required_dir = match dir {
-            Direction::North => Direction::South,
-            Direction::South => Direction::North,
-            Direction::East => Direction::West,
-            Direction::West => Direction::East,
-            Direction::None => panic!("Should not be None"),
-        };
+        let required_dir = dir.inverse();
+
         // check if the next current_dirs has a pipe facing in this direction
         if !next_dirs.contains(&required_dir) {
             continue;
