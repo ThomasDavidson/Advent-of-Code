@@ -1,17 +1,6 @@
-#[derive(Debug, PartialEq)]
-enum Direction {
-    None,
-    North,
-    South,
-    East,
-    West,
-}
-
-#[derive(Debug)]
-struct Coord {
-    x: usize,
-    y: usize,
-}
+use std::time::Instant;
+use library::grid::{Direction, UVec2};
+type Coord = UVec2<usize>;
 
 fn get_tile_connections(symbol: &char) -> Vec<Direction> {
     match symbol {
@@ -37,37 +26,14 @@ fn check_direction(lines: &Vec<&str>, coord: &Coord, dir: &Direction) -> Option<
     let height = lines.len();
 
     // check if out of bounds for each direction
-    let out_of_bounds = match dir {
-        Direction::North => coord.y == 0,
-        Direction::West => coord.x == 0,
-        Direction::East => coord.x + 1 > width,
-        Direction::South => coord.y + 1 > height,
-        Direction::None => panic!("Should not be None"),
+    let next_coord = match *coord + *dir {
+        Ok(res) => res,
+        Err(_) => return None,
     };
 
-    if out_of_bounds {
+    if next_coord.check_bounds(width, height) {
         return None;
     }
-
-    let next_coord = match dir {
-        Direction::North => Coord {
-            x: coord.x,
-            y: coord.y - 1,
-        },
-        Direction::South => Coord {
-            x: coord.x,
-            y: coord.y + 1,
-        },
-        Direction::East => Coord {
-            x: coord.x + 1,
-            y: coord.y,
-        },
-        Direction::West => Coord {
-            x: coord.x - 1,
-            y: coord.y,
-        },
-        Direction::None => panic!("Should not be None"),
-    };
 
     Some(next_coord)
 }
@@ -84,7 +50,7 @@ fn get_start(input: &str) -> Option<Coord> {
     for (y, line) in input.lines().enumerate() {
         for (x, c) in line.chars().enumerate() {
             if 'S' == c {
-                return Some(Coord { x: x, y: y });
+                return Some(Coord::new(x, y));
             }
         }
     }
@@ -135,7 +101,7 @@ fn get_next_tile(
     return None;
 }
 
-fn get_part_1_answer(input: &str) -> u64 {
+fn part_1(input: &str) -> u64 {
     let mut part_1_answer: u64 = 0;
 
     let lines: Vec<&str> = input.lines().collect();
@@ -173,7 +139,8 @@ fn get_part_1_answer(input: &str) -> u64 {
 fn main() {
     let input = include_str!("../input.txt");
 
-    let part_1_answer = get_part_1_answer(&input);
-
-    println!("part 1 answer: {}", part_1_answer);
+    let start: Instant = Instant::now();
+    let part_1_answer = part_1(&input);
+    let duration = start.elapsed();
+    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
 }
