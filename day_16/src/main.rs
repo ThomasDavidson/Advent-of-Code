@@ -3,7 +3,7 @@ use std::time::Instant;
 use library::grid::{Direction, GridState};
 
 fn beam_move(contraction: &Vec<Vec<char>>, state: GridState) -> Vec<GridState> {
-    let tile = contraction[state.y][state.x];
+    let tile = contraction[state.coords.y][state.coords.x];
 
     let directions: Vec<Direction> = match (tile, state.direction) {
         ('.', _) => vec![state.direction],
@@ -30,10 +30,9 @@ fn beam_move(contraction: &Vec<Vec<char>>, state: GridState) -> Vec<GridState> {
         .map(|&direction| GridState { direction, ..state })
         .filter(|state| state.check_bounds(width, height))
         .map(|state| {
-            let (x, y) = state.direction.get_translation();
+            let (x, y): (i16, i16) = state.direction.get_translation();
             GridState {
-                x: (state.x as i16 + x) as usize,
-                y: (state.y as i16 + y) as usize,
+                coords: (state.coords + state.direction).unwrap(),
                 ..state
             }
         })
@@ -48,7 +47,7 @@ fn get_energized_count(contraction: &Vec<Vec<char>>, initial: &GridState) -> usi
         .collect();
 
     let mut states = vec![initial.clone()];
-    visited[initial.y][initial.x][Direction::East as usize] = true;
+    visited[initial.coords.y][initial.coords.x][Direction::East as usize] = true;
 
     while !states.is_empty() {
         let new_states = states
@@ -58,10 +57,10 @@ fn get_energized_count(contraction: &Vec<Vec<char>>, initial: &GridState) -> usi
         states = new_states
             .flat_map(|a| a)
             // check if spot has been visited in same direction
-            .filter(|state| !visited[state.y][state.x][state.direction as usize])
+            .filter(|state| !visited[state.coords.y][state.coords.x][state.direction as usize])
             .collect();
         for state in &states {
-            visited[state.y][state.x][state.direction as usize] = true;
+            visited[state.coords.y][state.coords.x][state.direction as usize] = true;
         }
     }
 
@@ -73,11 +72,7 @@ fn get_energized_count(contraction: &Vec<Vec<char>>, initial: &GridState) -> usi
 }
 
 fn part_1(contraction: &Vec<Vec<char>>) -> usize {
-    let initial = GridState {
-        direction: Direction::East,
-        x: 0,
-        y: 0,
-    };
+    let initial = GridState::new(0, 0, Direction::East);
 
     get_energized_count(contraction, &initial)
 }
@@ -87,34 +82,18 @@ fn part_2(contraction: &Vec<Vec<char>>) -> usize {
     let height = contraction.len() - 1;
 
     let north_initial: Vec<GridState> = (0..width)
-        .map(|i| GridState {
-            x: i,
-            y: 0,
-            direction: Direction::South,
-        })
+        .map(|i| GridState::new(i, 0, Direction::South))
         .collect();
 
     let west_initial: Vec<GridState> = (0..width)
-        .map(|i| GridState {
-            x: 0,
-            y: i,
-            direction: Direction::South,
-        })
+        .map(|i| GridState::new(0, i, Direction::South))
         .collect();
     let east_initial: Vec<GridState> = (0..width)
-        .map(|i| GridState {
-            x: i,
-            y: width,
-            direction: Direction::South,
-        })
+        .map(|i| GridState::new(i, width, Direction::South))
         .collect();
 
     let south_initial: Vec<GridState> = (0..width)
-        .map(|i| GridState {
-            x: i,
-            y: height,
-            direction: Direction::South,
-        })
+        .map(|i| GridState::new(i, height, Direction::South))
         .collect();
 
     let initial_states: Vec<GridState> =

@@ -27,7 +27,7 @@ fn crucible_move(
         .map(|&direction| CrucibleState {
             // set run to zero if not same direction
             grid: GridState {
-                direction: direction,
+                direction,
                 ..state.grid
             },
             run: if direction == state.grid.direction {
@@ -38,23 +38,16 @@ fn crucible_move(
             ..state
         })
         .filter(|new_state| new_state.grid.check_bounds(width, height))
-        .map(|new_state| {
-            let (x, y) = new_state.grid.direction.get_translation();
-            CrucibleState {
-                grid: GridState {
-                    x: (new_state.grid.x as i16 + x) as usize,
-                    y: (state.grid.y as i16 + y) as usize,
-                    ..new_state.grid
-                },
-                ..new_state
-            }
+        .map(|new_state| CrucibleState {
+            grid: (new_state.grid + new_state.grid.direction).unwrap(),
+            ..new_state
         })
-        // Caclulate weight
+        // Calculate weight
         .map(|new_state| {
             // stopping doesn't add any weight
             let new_weight = match new_state.grid.direction {
                 Direction::None => new_state.weight,
-                _ => new_state.weight + grid[new_state.grid.y][new_state.grid.x],
+                _ => new_state.weight + grid[new_state.grid.coords.y][new_state.grid.coords.x],
             };
             CrucibleState {
                 weight: new_weight,
@@ -75,7 +68,7 @@ struct Visited {
 }
 impl Visited {
     fn get_weight(&self, state: &CrucibleState) -> usize {
-        let visit_state = &self.grid[state.grid.y][state.grid.x];
+        let visit_state = &self.grid[state.grid.coords.y][state.grid.coords.x];
         let res = visit_state
             .iter()
             .find(|&visit| (visit.direction == state.grid.direction) && (visit.run == state.run));
@@ -96,7 +89,7 @@ impl Visited {
         }
     }
     fn set_weight(&mut self, state: &CrucibleState) -> bool {
-        let visit_state = &mut self.grid[state.grid.y][state.grid.x];
+        let visit_state = &mut self.grid[state.grid.coords.y][state.grid.coords.x];
 
         let visit_find = visit_state
             .iter_mut()
@@ -156,7 +149,7 @@ fn print_path(paths: &Vec<GridState>, width: usize, height: usize) {
         .collect();
 
     for path in paths {
-        path_grid[path.y][path.x] = path.direction.to_char();
+        path_grid[path.coords.y][path.coords.x] = path.direction.to_char();
     }
 
     print_grid(path_grid);
@@ -190,8 +183,8 @@ fn get_lowest_heat_loss(
     while !states.is_empty() {
         if visited.get_min_weight(goal_x, goal_y) == usize::MAX {
             states.sort_by(|a, b| {
-                let a_dist = a.grid.x.abs_diff(goal_x) + a.grid.y.abs_diff(goal_y);
-                let b_dist = b.grid.x.abs_diff(goal_x) + b.grid.y.abs_diff(goal_y);
+                let a_dist = a.grid.coords.x.abs_diff(goal_x) + a.grid.coords.y.abs_diff(goal_y);
+                let b_dist = b.grid.coords.x.abs_diff(goal_x) + b.grid.coords.y.abs_diff(goal_y);
 
                 b_dist.partial_cmp(&a_dist).unwrap()
             });
@@ -207,7 +200,8 @@ fn get_lowest_heat_loss(
             let pos_min_weight = visited.get_weight(&s);
             let goal_min_weight = visited.get_min_weight(goal_x, goal_y);
 
-            let distance_to_goal = s.grid.x.abs_diff(goal_x) + s.grid.y.abs_diff(goal_y);
+            let distance_to_goal =
+                s.grid.coords.x.abs_diff(goal_x) + s.grid.coords.y.abs_diff(goal_y);
             // compares with other iterations that have visited this node
             // and that have visited the goal with a distance penalty
             if pos_min_weight > s.weight && goal_min_weight > (s.weight + distance_to_goal - 1) {
@@ -220,11 +214,7 @@ fn get_lowest_heat_loss(
 }
 
 fn part_1(grid: Vec<Vec<usize>>) -> usize {
-    let initial_grid = GridState {
-        direction: Direction::None,
-        x: 0,
-        y: 0,
-    };
+    let initial_grid = GridState::new(0, 0, Direction::None);
     let initial: CrucibleState = CrucibleState {
         grid: initial_grid,
         run: 1,
@@ -261,11 +251,7 @@ fn part_1(grid: Vec<Vec<usize>>) -> usize {
 
 fn part_2(grid: Vec<Vec<usize>>) -> usize {
     let initial: CrucibleState = CrucibleState {
-        grid: GridState {
-            direction: Direction::None,
-            x: 0,
-            y: 0,
-        },
+        grid: GridState::new(0, 0, Direction::None),
         run: 1,
         weight: 0,
     };

@@ -105,43 +105,34 @@ impl Direction {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GridState {
     pub direction: Direction,
-    pub x: usize,
-    pub y: usize,
+    pub coords: UVec2<usize>,
 }
 
 impl GridState {
-    pub const fn check_bounds(&self, width: usize, height: usize) -> bool {
-        match self.direction {
-            Direction::South => {
-                if self.y + 1 == height {
-                    false
-                } else {
-                    true
-                }
-            }
-            Direction::East => {
-                if self.x + 1 == width {
-                    false
-                } else {
-                    true
-                }
-            }
-            Direction::North => {
-                if self.y == 0 {
-                    false
-                } else {
-                    true
-                }
-            }
-            Direction::West => {
-                if self.x == 0 {
-                    false
-                } else {
-                    true
-                }
-            }
-            Direction::None => true,
+    pub fn new(x: usize, y: usize, direction: Direction) -> Self {
+        GridState {
+            coords: UVec2::new(x, y),
+            direction,
         }
+    }
+    pub fn check_bounds(&self, width: usize, height: usize) -> bool {
+        let new_coord = match self.coords + self.direction {
+            Ok(c) => c,
+            Err(_) => return false,
+        };
+        return !new_coord.check_bounds(width, height);
+                }
+            }
+
+impl Add<Direction> for GridState {
+    type Output = Result<GridState, ()>;
+
+    fn add(self, rhs: Direction) -> Self::Output {
+        let coords = match self.coords + rhs {
+            Ok(c) => c,
+            Err(_) => return Err(()),
+        };
+        Ok(Self { coords, ..self })
     }
 }
 
