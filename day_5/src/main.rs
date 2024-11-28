@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 fn get_number_lists(lines: &str) -> Vec<[i64; 3]> {
     let mut maps: Vec<Vec<i64>> = vec![];
     let mut array_maps: Vec<[i64; 3]> = Vec::new();
@@ -46,9 +48,7 @@ fn get_location_from_seed(seed: i64, maps: &Vec<Vec<[i64; 3]>>) -> i64 {
     res
 }
 
-fn main() {
-    let input: &str = include_str!("../input.txt");
-
+fn part_1(input: &str) -> i64 {
     let mut sections = input.split("\r\n\r\n");
 
     let seed_str = match sections.next() {
@@ -61,26 +61,43 @@ fn main() {
         .filter_map(|s| s.parse::<i64>().ok())
         .collect();
 
-    let mut seed_map_maps: Vec<Vec<[i64; 3]>> = Vec::new();
+    let seed_map_maps: Vec<Vec<[i64; 3]>> = sections
+        .into_iter()
+        .map(|section| get_number_lists(section))
+        .collect();
 
-    for section in sections {
-        let maps: Vec<[i64; 3]> = get_number_lists(section);
-        // println!("{:?}", maps);
-        seed_map_maps.push(maps)
-    }
-
-    let mut day_1_answer: Vec<i64> = vec![];
+    let mut part_1_answer: Vec<i64> = vec![];
     for seed in seed_nums.clone() {
         let location = get_location_from_seed(seed, &seed_map_maps);
 
-        day_1_answer.push(location);
+        part_1_answer.push(location);
     }
-    println!("day_1_answer: {:?}", day_1_answer.iter().min());
+
+    *part_1_answer.iter().min().unwrap()
+}
+
+fn part_2(input: &str) -> i64 {
+    let mut sections = input.split("\r\n\r\n");
+
+    let seed_str = match sections.next() {
+        None => panic!("Should not be none"),
+        Some(i) => i,
+    };
+
+    let seed_nums: Vec<i64> = seed_str
+        .split_whitespace()
+        .filter_map(|s| s.parse::<i64>().ok())
+        .collect();
+
+    let seed_map_maps: Vec<Vec<[i64; 3]>> = sections
+        .into_iter()
+        .map(|section| get_number_lists(section))
+        .collect();
 
     let day_2_seed_chunk = seed_nums.chunks(2);
     let day_2_seed_chunk_len = day_2_seed_chunk.len();
 
-    let mut day_2_answers: Vec<i64> = vec![];
+    let mut part_2_answers: Vec<i64> = vec![];
 
     for (i, day_2_seed_pair) in day_2_seed_chunk.into_iter().enumerate() {
         println!("{} out of {}", i, day_2_seed_chunk_len);
@@ -98,12 +115,24 @@ fn main() {
 
         for day_2_seed in seed_range {
             let location = get_location_from_seed(day_2_seed.clone(), &seed_map_maps);
-            day_2_answers.push(location);
+            part_2_answers.push(location);
         }
     }
+    *part_2_answers.iter().min().unwrap()
+}
 
-    println!("day_2_answers: {:?}", day_2_answers);
-    println!("day_2_answer: {:?}", day_2_answers.iter().min());
+fn main() {
+    let input: &str = include_str!("../input.txt");
+
+    let start: Instant = Instant::now();
+    let part_1_answer = part_1(&input);
+    let duration = start.elapsed();
+    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
+
+    let start: Instant = Instant::now();
+    let part_2_answer = part_2(&input);
+    let duration = start.elapsed();
+    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
 }
 
 #[cfg(test)]
