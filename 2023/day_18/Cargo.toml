@@ -1,9 +1,10 @@
 [package]
-name = "day_16"
+name = "day_18"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-library = { version = "0.1.0", path = "../library" }
+library = { version = "0.1.0", path = "../../library" }
+shoelace = "0.1.3"
