@@ -136,7 +136,7 @@ impl Add<Direction> for GridState {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct UVec2<T> {
     pub x: T,
     pub y: T,
