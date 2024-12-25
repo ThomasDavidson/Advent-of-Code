@@ -14,7 +14,7 @@ pub enum DirectionFilter {
     Backwards,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
 pub enum Direction {
     None,
     North,
