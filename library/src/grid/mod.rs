@@ -177,6 +177,31 @@ impl Add<Direction> for UVec2<usize> {
     }
 }
 
+pub type Coord = UVec2<usize>;
+
+pub fn find_in_coord<T>(map: &Vec<Vec<T>>, find: &T) -> Vec<Coord>
+where
+    T: PartialEq<T>,
+{
+    let found: Vec<(Coord, &T)> = map
+        .iter()
+        .enumerate()
+        .map(|(y, line)| {
+            line.iter()
+                .enumerate()
+                .map(|(x, needle)| (Coord::new(x, y), needle))
+                .collect::<Vec<(Coord, &T)>>()
+        })
+        .flatten()
+        .collect();
+
+    found
+        .iter()
+        .filter(|(_, needle)| needle == &find)
+        .map(|(coord, _)| *coord)
+        .collect()
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Vec2<T> {
     pub x: T,
