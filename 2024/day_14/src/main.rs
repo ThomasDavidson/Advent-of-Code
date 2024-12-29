@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::time::Instant;
 
 use library::grid::{Coord, UVec2};
 
@@ -46,7 +46,7 @@ impl Robot {
         let mut new_x = self.position.x as i32 + self.velocity.x;
         if new_x < 0 {
             new_x += width as i32;
-        } else if new_x > width as i32 {
+        } else if new_x >= width as i32 {
             new_x %= width as i32;
         }
         self.position.x = new_x as usize;
@@ -54,7 +54,7 @@ impl Robot {
         let mut new_y = self.position.y as i32 + self.velocity.y;
         if new_y < 0 {
             new_y += height as i32;
-        } else if new_y > height as i32 {
+        } else if new_y >= height as i32 {
             new_y %= height as i32;
         }
         self.position.y = new_y as usize;
@@ -84,19 +84,83 @@ impl Bathroom {
 
     fn simulate_n(&mut self, n: usize) {
         for _ in 0..n {
+            self.debug();
+            println!();
             self.simulate();
         }
     }
 
-    fn num_robots_in_area(&self, x_range: Range<usize>, y_range: Range<usize>) {
-        
+    fn num_robots_in_area(&self, x_min: usize, x_max: usize, y_min: usize, y_max: usize) -> usize {
+        let inside = self.robots
+            .iter()
+            .filter(|robot| {
+                   robot.position.y >= y_min
+                && robot.position.y < y_max
+                && robot.position.x >= x_min
+                && robot.position.x < x_max
+            });
+
+            inside.count()
+    }
+    fn debug(&self) {
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let  count = self
+                    .robots
+                    .iter()
+                    .filter(|robot| robot.position.x == x && robot.position.y == y)
+                    .count();
+                if count == 0 {
+                    print!(".")
+                } else {
+                    print!("{count}");
+                }
+            }
+            println!();
+        }
     }
 }
 
-fn main() {
-    let input = include_str!("../example.txt");
-
-    let mut bathroom = Bathroom::from_input(input, 11, 7);
+fn part_1(input: &str) -> u64 {
+    let mut bathroom = Bathroom::from_input(input, 101, 103);
 
     bathroom.simulate_n(100);
+
+    let quarter_width = bathroom.width.div_euclid(2);
+    let quarter_2_start_x = bathroom.width.div_ceil(2);
+
+    let quarter_height = bathroom.height.div_euclid(2);
+    let quarter_2_start_y = bathroom.height.div_ceil(2);
+
+    let mut part_1_answer = 1;
+
+
+    for (y_min, y_max) in [(0, quarter_height), (quarter_2_start_y, bathroom.height)] {
+        for (x_min, x_max) in [(0, quarter_width), (quarter_2_start_x, bathroom.width)] {
+            let quarter_count = bathroom.num_robots_in_area(x_min, x_max, y_min, y_max);
+            part_1_answer *= quarter_count;
+        }
+    }
+    
+
+    part_1_answer as u64
+}
+
+fn part_2(input: &str) -> u64 {
+    0
+}
+
+fn main() {
+    let input = include_str!("../input.txt");
+
+
+    let start: Instant = Instant::now();
+    let part_1_answer = part_1(&input);
+    let duration = start.elapsed();
+    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
+
+    let start: Instant = Instant::now();
+    let part_2_answer = part_2(&input);
+    let duration = start.elapsed();
+    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
 }
