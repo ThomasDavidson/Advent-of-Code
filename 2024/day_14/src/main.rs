@@ -84,28 +84,24 @@ impl Bathroom {
 
     fn simulate_n(&mut self, n: usize) {
         for _ in 0..n {
-            self.debug();
-            println!();
             self.simulate();
         }
     }
 
     fn num_robots_in_area(&self, x_min: usize, x_max: usize, y_min: usize, y_max: usize) -> usize {
-        let inside = self.robots
-            .iter()
-            .filter(|robot| {
-                   robot.position.y >= y_min
+        let inside = self.robots.iter().filter(|robot| {
+            robot.position.y >= y_min
                 && robot.position.y < y_max
                 && robot.position.x >= x_min
                 && robot.position.x < x_max
-            });
+        });
 
-            inside.count()
+        inside.count()
     }
     fn debug(&self) {
         for y in 0..self.height {
             for x in 0..self.width {
-                let  count = self
+                let count = self
                     .robots
                     .iter()
                     .filter(|robot| robot.position.x == x && robot.position.y == y)
@@ -134,25 +130,44 @@ fn part_1(input: &str) -> u64 {
 
     let mut part_1_answer = 1;
 
-
     for (y_min, y_max) in [(0, quarter_height), (quarter_2_start_y, bathroom.height)] {
         for (x_min, x_max) in [(0, quarter_width), (quarter_2_start_x, bathroom.width)] {
             let quarter_count = bathroom.num_robots_in_area(x_min, x_max, y_min, y_max);
             part_1_answer *= quarter_count;
         }
     }
-    
 
     part_1_answer as u64
 }
 
 fn part_2(input: &str) -> u64 {
+    let mut bathroom = Bathroom::from_input(input, 101, 103);
+
+    bathroom.simulate_n(100);
+
+    let quarter_width = bathroom.width.div_euclid(2);
+    let q2_start_x = bathroom.width.div_ceil(2);
+
+    for i in 0..1000 {
+        for y in 0..bathroom.height {
+            let left_robots = bathroom.num_robots_in_area(0, quarter_width, y, y + 1);
+            let right_robots = bathroom.num_robots_in_area(q2_start_x, bathroom.width, y, y + 1);
+            // println!("left: {left_robots}, right: {right_robots}");
+            if left_robots != right_robots {
+                break;
+            }
+            bathroom.debug();
+            return i;
+        }
+        bathroom.simulate();
+    }
+
+    bathroom.debug();
     0
 }
 
 fn main() {
     let input = include_str!("../input.txt");
-
 
     let start: Instant = Instant::now();
     let part_1_answer = part_1(&input);
