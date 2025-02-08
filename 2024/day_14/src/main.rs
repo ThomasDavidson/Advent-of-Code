@@ -1,5 +1,6 @@
-use std::time::Instant;
+use std::{ops::Rem, time::Instant};
 
+use itertools::Itertools;
 use library::grid::{Coord, UVec2};
 
 #[derive(Debug)]
@@ -115,6 +116,19 @@ impl Bathroom {
             println!();
         }
     }
+    fn variance(&self) -> (u32, u32) {
+        let mut variance_x: u32 = 0;
+        let mut variance_y: u32 = 0;
+
+        for robots in self.robots.iter().combinations(2) {
+            let robot1 = robots[0];
+            let robot2 = robots[1];
+
+            variance_x += robot1.position.x.abs_diff(robot2.position.x) as u32;
+            variance_y += robot1.position.y.abs_diff(robot2.position.y) as u32;
+        }
+        return (variance_x, variance_y);
+    }
 }
 
 fn part_1(input: &str) -> u64 {
@@ -140,30 +154,34 @@ fn part_1(input: &str) -> u64 {
     part_1_answer as u64
 }
 
-fn part_2(input: &str) -> u64 {
+fn part_2(input: &str) -> u32 {
     let mut bathroom = Bathroom::from_input(input, 101, 103);
 
-    bathroom.simulate_n(100);
+    let mut min_variances = (u32::MAX, u32::MAX);
+    let mut min_variances_i = (0, 0);
 
-    let quarter_width = bathroom.width.div_euclid(2);
-    let q2_start_x = bathroom.width.div_ceil(2);
-
-    for i in 0..1000 {
-        for y in 0..bathroom.height {
-            let left_robots = bathroom.num_robots_in_area(0, quarter_width, y, y + 1);
-            let right_robots = bathroom.num_robots_in_area(q2_start_x, bathroom.width, y, y + 1);
-            // println!("left: {left_robots}, right: {right_robots}");
-            if left_robots != right_robots {
-                break;
-            }
-            bathroom.debug();
-            return i;
+    for i in 0..103 {
+        let variances = bathroom.variance();
+        if variances.0 < min_variances.0 {
+            min_variances.0 = variances.0;
+            min_variances_i.0 = i;
         }
+        if variances.1 < min_variances.1 {
+            min_variances.1 = variances.1;
+            min_variances_i.1 = i;
+        }
+        // bathroom.debug();
         bathroom.simulate();
     }
 
-    bathroom.debug();
-    0
+    let diff_var = min_variances_i.0 as i32 - min_variances_i.1 as i32;
+
+    let diff_wh = bathroom.width as i32 - bathroom.height as i32;
+
+    let n = diff_var / diff_wh;
+
+    (bathroom.width as i32 * n + 52).rem(bathroom.width as i32 * bathroom.height as i32) as u32
+
 }
 
 fn main() {
@@ -178,4 +196,20 @@ fn main() {
     let part_2_answer = part_2(&input);
     let duration = start.elapsed();
     println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Bathroom;
+
+    #[test]
+    fn test1() {
+        let input = include_str!("../example2.txt");
+        let bathroom = Bathroom::from_input(input, 11, 7);
+
+        bathroom.debug();
+
+        let result = bathroom.variance();
+        assert_eq!(result, true);
+    }
 }
