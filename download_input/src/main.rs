@@ -1,8 +1,7 @@
-use reqwest::header::USER_AGENT;
 use reqwest::{Client, Url};
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::{env, fs, io, thread};
+use std::{fs, io};
 
 fn generate_file_path(year: u16, day: u8) -> PathBuf {
     PathBuf::from(format!("./{year}/day_{day}/input.txt"))
@@ -40,7 +39,7 @@ async fn main() -> io::Result<()> {
                 .header("Cookie", session_cookie.clone())
                 .send()
                 .await
-                .expect("Download failed, add session id to file if you havn't");
+                .expect("Download failed, add session id to file if you haven't");
 
             let text = response.text().await.unwrap();
 
