@@ -1,53 +1,56 @@
-use std::{iter, time::Instant};
+use library::input::{Day, InputType};
+use std::iter;
 
-fn part_1(input: &str) -> u32 {
-    let (left_list, right_list): (Vec<&str>, Vec<&str>) = input
-        .lines()
-        .map(|line| line.split_once("   ").unwrap())
-        .collect();
-
-    let mut left_list: Vec<u32> = left_list.into_iter().map(|s| s.parse().unwrap()).collect();
-    let mut right_list: Vec<u32> = right_list.into_iter().map(|s| s.parse().unwrap()).collect();
-
-    left_list.sort();
-    right_list.sort();
-
-    iter::zip(left_list, right_list).fold(0, |acc, (l, r)| acc + l.abs_diff(r))
+struct List {
+    left_list: Vec<u32>,
+    right_list: Vec<u32>,
 }
+impl List {
+    fn parse(input: &str) -> Self {
+        let (left_list, right_list): (Vec<u32>, Vec<u32>) = input
+            .lines()
+            .map(|line| line.split_once("   ").unwrap())
+            .map(|(l, r)| (l.parse::<u32>().unwrap(), r.parse::<u32>().unwrap()))
+            .collect();
 
-fn part_2(input: &str) -> u32 {
-    let (left_list, right_list): (Vec<&str>, Vec<&str>) = input
-        .lines()
-        .map(|line| line.split_once("   ").unwrap())
-        .collect();
-
-    let mut left_list: Vec<u32> = left_list.into_iter().map(|s| s.parse().unwrap()).collect();
-    let mut right_list: Vec<u32> = right_list.into_iter().map(|s| s.parse().unwrap()).collect();
-
-    left_list.sort();
-    right_list.sort();
-
-    let mut part_2_answer: u32 = 0;
-
-    for left in left_list {
-        let right_count = right_list.iter().filter(|right|right == &&left).count();
-
-        part_2_answer += right_count as u32 * left;
+        Self {
+            left_list,
+            right_list,
+        }
     }
-
-    part_2_answer
 }
 
-fn main() {
-    let input: &str = include_str!("../example.txt");
+#[derive(Clone)]
+struct Day1;
+const DAY: Day1 = Day1;
+impl Day<u32> for Day1 {
+    fn part_1(&self, input: &str) -> u32 {
+        let mut list = List::parse(input);
 
-    let start: Instant = Instant::now();
-    let part_1_answer = part_1(&input);
-    let duration = start.elapsed();
-    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
+        list.left_list.sort();
+        list.right_list.sort();
 
-    let start: Instant = Instant::now();
-    let part_2_answer = part_2(&input);
-    let duration = start.elapsed();
-    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
+        iter::zip(list.left_list, list.right_list).fold(0, |acc, (l, r)| acc + l.abs_diff(r))
+    }
+    fn part_2(&mut self, input: &str) -> u32 {
+        let mut list = List::parse(input);
+
+        list.left_list.sort();
+        list.right_list.sort();
+
+        list.left_list
+            .into_iter()
+            .map(|left| {
+                list.right_list
+                    .iter()
+                    .filter(|right| right == &&left)
+                    .count() as u32
+                    * left
+            })
+            .sum()
+     }
+}
+
+fn main() -> std::io::Result<()> {
+    DAY.clone().run(InputType::UserInput)
 }
