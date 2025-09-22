@@ -1,5 +1,5 @@
+use library::input::{Day, InputType};
 use std::num::ParseIntError;
-use std::time::Instant;
 
 fn get_word_from_line(line: &str, parse_str_num: bool) -> Result<i32, ParseIntError> {
     let letters: [&str; 9] = [
@@ -48,43 +48,28 @@ fn get_word_from_line(line: &str, parse_str_num: bool) -> Result<i32, ParseIntEr
 
     let combined_string = first_digit.to_string() + &last_digit.to_string();
 
-    let result: Result<i32, _> = combined_string.parse();
-
-    return result;
+    combined_string.parse()
 }
 
-fn part_1(lines: &Vec<&str>) -> i32 {
-    lines
-        .iter()
-        .map(|line| get_word_from_line(line, false).unwrap())
-        .fold(0, |acc, x| acc + x)
-}
-
-fn part_2(lines: &Vec<&str>) -> i32 {
-    lines
-        .iter()
-        .map(|line| get_word_from_line(line, true).unwrap())
-        .fold(0, |acc, x| acc + x)
+struct Day1;
+const DAY: Day1 = Day1;
+impl Day<i32> for Day1 {
+    fn part_1(&self, input: &str) -> i32 {
+        input
+            .lines()
+            .map(|line| get_word_from_line(line, false).unwrap())
+            .sum::<i32>()
+    }
+    fn part_2(&self, input: &str) -> i32 {
+        input
+            .lines()
+            .map(|line| get_word_from_line(line, true).unwrap())
+            .sum::<i32>()
+    }
 }
 
 fn main() -> std::io::Result<()> {
-    let input = include_str!("../input.txt");
-
-    let lines: Vec<&str> = input.lines().collect();
-
-    println!("Day 1");
-
-    let start: Instant = Instant::now();
-    let part_1_answer = part_1(&lines);
-    let duration = start.elapsed();
-    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
-
-    let start: Instant = Instant::now();
-    let part_2_answer = part_2(&lines);
-    let duration = start.elapsed();
-    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
-
-    Ok(())
+    DAY.run(InputType::UserInput)
 }
 
 #[cfg(test)]

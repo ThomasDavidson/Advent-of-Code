@@ -1,4 +1,4 @@
-use std::time::Instant;
+use library::input::{Day, InputType};
 
 fn has_special_char(compare_top: &str, start_cmp_val: usize, end_value: usize) -> bool {
     let compare_top_section = compare_top.get(start_cmp_val..end_value);
@@ -35,25 +35,18 @@ fn get_number_from_lines(
 
         if (!char.is_numeric() || pos == compare.len() - 1) && start_cmp.is_some() {
             // remove option
-            let mut start_cmp_val = match start_cmp {
-                None => 0,
-                Some(val) => val,
-            };
+            let mut start_cmp_val = start_cmp.unwrap_or(0);
             // end
             let mut end_val = start_cmp_val + len;
 
             let part_number: i32 = match compare.get(start_cmp_val..end_val) {
-                Some(val) => {
-                    let num = val.parse().unwrap();
-                    num
-                }
+                Some(val) => val.parse().unwrap(),
                 None => panic!("No value found"),
             };
 
             // add 1 to end and remove one from start to check adjacent values
-            if start_cmp_val > 0 {
-                start_cmp_val = start_cmp_val - 1;
-            }
+            start_cmp_val = start_cmp_val.saturating_sub(1);
+
             if end_val < compare.len() {
                 end_val += 1;
             }
@@ -63,7 +56,7 @@ fn get_number_from_lines(
                 None => false,
             };
 
-            let compare_check = has_special_char(&compare, start_cmp_val, end_val);
+            let compare_check = has_special_char(compare, start_cmp_val, end_val);
 
             let bottom_check: bool = match compare_bottom {
                 Some(top) => has_special_char(top, start_cmp_val, end_val),
@@ -105,7 +98,7 @@ fn check_adjacent_spaces(
     lines: &Vec<&str>,
     coord: Coord,
     offset_to_check: &Vec<[i16; 2]>,
-    mut checked_coords: &mut Vec<Coord>,
+    checked_coords: &mut Vec<Coord>,
 ) -> Vec<Coord> {
     let mut askii_coords: Vec<Coord> = Vec::new();
     let height = lines.len();
@@ -144,20 +137,15 @@ fn check_adjacent_spaces(
         // check coordinates to the left and right of the askii
         let secondary_check_coords = vec![[-1, 0], [1, 0]];
 
-        // println!("Letter: {}", letter as char);
-        let mut res: Vec<Coord> = check_adjacent_spaces(
-            &lines,
-            new_coord,
-            &secondary_check_coords,
-            &mut checked_coords,
-        );
+        let mut res: Vec<Coord> =
+            check_adjacent_spaces(lines, new_coord, &secondary_check_coords, checked_coords);
         askii_coords.append(&mut res);
     }
 
     askii_coords
 }
 
-fn debug_print(height: usize, width: usize, checked_coords: Vec<Coord>, askii_coords: Vec<Coord>) {
+fn _debug_print(height: usize, width: usize, checked_coords: Vec<Coord>, askii_coords: Vec<Coord>) {
     let mut char_2d: Vec<Vec<char>> = Vec::new();
     for _y in 0..height {
         let mut char_1d: Vec<char> = Vec::new();
@@ -175,11 +163,11 @@ fn debug_print(height: usize, width: usize, checked_coords: Vec<Coord>, askii_co
         char_2d[coord.y][coord.x] = 'a';
     }
 
-    for y in 0..height {
-        for x in 0..width {
-            print!("{}", char_2d[y][x]);
+    for y in char_2d {
+        for x in y {
+            print!("{}", x);
         }
-        println!("");
+        println!();
     }
 }
 
@@ -191,13 +179,13 @@ fn combine_letters_to_numbers(lines: Vec<&str>, mut number_coords: Vec<Coord>) -
     number_coords.sort();
 
     for number_coord in number_coords {
-        if last_coord.y != number_coord.y || last_coord.x + 1 != number_coord.x {
-            if !string.is_empty() {
-                let value = string.parse::<i32>().unwrap();
-                ret.push(value);
+        if (last_coord.y != number_coord.y || last_coord.x + 1 != number_coord.x)
+            && !string.is_empty()
+        {
+            let value = string.parse::<i32>().unwrap();
+            ret.push(value);
 
-                string.clear();
-            }
+            string.clear();
         }
 
         let line = lines[number_coord.y];
@@ -247,11 +235,10 @@ fn part_2(input: &str) -> i32 {
     for y in 0..height {
         for x in 0..width {
             if lines[y].as_bytes()[x] == b'*' {
-                // println!("Checking {} {}", x, y);
                 // check all adjacent spaces
                 let res = check_adjacent_spaces(
                     &lines,
-                    Coord { x: x, y: y },
+                    Coord { x, y },
                     &offset_to_check,
                     &mut checked_coords,
                 );
@@ -268,18 +255,19 @@ fn part_2(input: &str) -> i32 {
     day_2_result
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
+struct Day3;
+const DAY: Day3 = Day3;
+impl Day<i32> for Day3 {
+    fn part_1(&self, input: &str) -> i32 {
+        part_1(input)
+    }
+    fn part_2(&self, input: &str) -> i32 {
+        part_2(input)
+    }
+}
 
-    let start: Instant = Instant::now();
-    let part_1_answer = part_1(input);
-    let duration = start.elapsed();
-    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
-
-    let start: Instant = Instant::now();
-    let part_2_answer = part_2(input);
-    let duration = start.elapsed();
-    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
+fn main() -> std::io::Result<()> {
+    DAY.run(InputType::UserInput)
 }
 
 #[cfg(test)]

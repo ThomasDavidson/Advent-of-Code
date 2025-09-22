@@ -1,6 +1,7 @@
 use core::fmt;
+use library::input::{Day, InputType};
 use rand::prelude::*;
-use std::{collections::HashMap, time::Instant};
+use std::collections::HashMap;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 struct Link {
@@ -10,8 +11,8 @@ struct Link {
 impl Link {
     fn new(source: Component, destination: Component) -> Self {
         Self {
-            original: [source.clone(), destination.clone()],
-            current: destination.clone(),
+            original: [source, destination],
+            current: destination,
         }
     }
 }
@@ -58,7 +59,7 @@ impl Apparatus {
             let component = Component::from_str(component_str);
             let connections: Vec<Component> = connections_str
                 .split(" ")
-                .map(|connection_str| Component::from_str(connection_str))
+                .map(Component::from_str)
                 .collect();
 
             new_self.components.insert(
@@ -72,7 +73,7 @@ impl Apparatus {
         // add reverse direction
         for (key, links) in new_self.components.clone() {
             for link in links {
-                let new_dest = Link::new(link.current, key.clone());
+                let new_dest = Link::new(link.current, key);
                 match new_self.components.get_mut(&link.current) {
                     Some(link_node) => link_node.push(new_dest),
                     None => {
@@ -115,14 +116,14 @@ impl Apparatus {
 
     fn remove_wire(&mut self, component1: &Component, component2: &Component) {
         {
-            let connection1 = self.adjacent_components_mut(&component1);
+            let connection1 = self.adjacent_components_mut(component1);
             if let Some(pos1) = connection1.iter().position(|c| c.current == *component2) {
                 connection1.remove(pos1);
             };
         }
 
         {
-            let connection2 = self.adjacent_components_mut(&component2);
+            let connection2 = self.adjacent_components_mut(component2);
             if let Some(pos2) = connection2.iter().position(|c| c.current == *component1) {
                 connection2.remove(pos2);
             };
@@ -135,7 +136,7 @@ impl Apparatus {
         original: [Component; 2],
     ) {
         {
-            let connection1 = self.adjacent_components_mut(&component1);
+            let connection1 = self.adjacent_components_mut(component1);
             connection1.push(Link {
                 original,
                 current: component2.to_owned(),
@@ -143,7 +144,7 @@ impl Apparatus {
         }
 
         {
-            let connection2 = self.adjacent_components_mut(&component2);
+            let connection2 = self.adjacent_components_mut(component2);
             connection2.push(Link {
                 original,
                 current: component1.to_owned(),
@@ -169,13 +170,13 @@ impl Apparatus {
 impl fmt::Display for Apparatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (source, destinations) in self.components.iter() {
-            if destinations.len() == 0 {
+            if destinations.is_empty() {
                 continue;
             }
 
             write!(f, "{}:", source)?;
-            for desination in destinations {
-                write!(f, " {}", desination)?;
+            for destination in destinations {
+                write!(f, " {}", destination)?;
             }
             writeln!(f)?;
         }
@@ -183,85 +184,81 @@ impl fmt::Display for Apparatus {
     }
 }
 
-fn part_1(input: &str) -> usize {
-    // process input
-    let orig_apparatus = Apparatus::from_str(input);
+#[derive(Clone)]
+struct Day18;
+const DAY: Day18 = Day18;
+impl Day<usize> for Day18 {
+    fn part_1(&self, input: &str) -> usize {
+        // process input
+        let orig_apparatus = Apparatus::from_str(input);
 
-    let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
-    for _i in 0..100 {
-        let mut apparatus = orig_apparatus.clone();
-        let mut components: Vec<Component> = apparatus.get_components();
+        for _i in 0..100 {
+            let mut apparatus = orig_apparatus.clone();
+            let mut components: Vec<Component> = apparatus.get_components();
 
-        for _j in 0..(apparatus.components.len() - 2) {
-            components.shuffle(&mut rng);
-            // get random node
-            let source = components.pop().unwrap();
-            // get random connected node
-            let destination = {
-                let adjacent_source = apparatus.adjacent_components(&source);
-                // random index
-                let Some(destination) = adjacent_source.choose(&mut rng) else {
-                    panic!("None adjacent")
-                };
-                destination
-            }
-            .to_owned();
-
-            // combine it with random connected code
-            apparatus.merge_components(&source, &destination.current);
-        }
-
-        // get 3 remaining nodes
-        let remaining_nodes: Vec<(Component, Vec<Link>)> = apparatus
-            .components
-            .into_iter()
-            .filter(|c| c.1.len() != 0)
-            .collect();
-        // check original graph with leftover connections cut
-        if remaining_nodes.iter().any(|node| node.1.len() != 3) {
-            continue;
-        }
-        // check if remaining nodes have 3 connections
-
-        for node in &remaining_nodes {
-            print!("{}:", node.0);
-            for n in &node.1 {
-                print!(" {}-{}", n.original[0], n.original[1]);
-            }
-            println!()
-        }
-        let mut test_apparatus = orig_apparatus.clone();
-
-        // get node from each side of the cut
-        let mut test_nodes: Option<[Component; 2]> = None;
-
-        for node in &remaining_nodes {
-            for n in &node.1 {
-                if test_nodes.is_none() {
-                    test_nodes = Some(n.original);
+            for _j in 0..(apparatus.components.len() - 2) {
+                components.shuffle(&mut rng);
+                // get random node
+                let source = components.pop().unwrap();
+                // get random connected node
+                let destination = {
+                    let adjacent_source = apparatus.adjacent_components(&source);
+                    // random index
+                    let Some(destination) = adjacent_source.choose(&mut rng) else {
+                        panic!("None adjacent")
+                    };
+                    destination
                 }
-                test_apparatus.remove_wire(&n.original[0], &n.original[1]);
+                .to_owned();
+
+                // combine it with random connected code
+                apparatus.merge_components(&source, &destination.current);
+            }
+
+            // get 3 remaining nodes
+            let remaining_nodes: Vec<(Component, Vec<Link>)> = apparatus
+                .components
+                .into_iter()
+                .filter(|c| !c.1.is_empty())
+                .collect();
+            // check original graph with leftover connections cut
+            if remaining_nodes.iter().any(|node| node.1.len() != 3) {
+                continue;
+            }
+            // check if remaining nodes have 3 connections
+
+            let mut test_apparatus = orig_apparatus.clone();
+
+            // get node from each side of the cut
+            let mut test_nodes: Option<[Component; 2]> = None;
+
+            for node in &remaining_nodes {
+                for n in &node.1 {
+                    if test_nodes.is_none() {
+                        test_nodes = Some(n.original);
+                    }
+                    test_apparatus.remove_wire(&n.original[0], &n.original[1]);
+                }
+            }
+
+            let test_nodes = test_nodes.unwrap();
+
+            let side_1_count = test_apparatus.connected_components(&test_nodes[0]).len();
+            let side_2_count = test_apparatus.connected_components(&test_nodes[1]).len();
+
+            if side_1_count != side_2_count {
+                return side_1_count * side_2_count;
             }
         }
-
-        let test_nodes = test_nodes.unwrap();
-
-        let side_1_count = test_apparatus.connected_components(&test_nodes[0]).len();
-        let side_2_count = test_apparatus.connected_components(&test_nodes[1]).len();
-
-        if side_1_count != side_2_count {
-            return side_1_count * side_2_count;
-        }
+        panic!("Did not find answer")
     }
-    panic!("Did not find answer")
+    fn part_2(&mut self, _input: &str) -> usize {
+        0
+    }
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
-
-    let start: Instant = Instant::now();
-    let part_1_answer = part_1(&input);
-    let duration = start.elapsed();
-    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
+fn main() -> std::io::Result<()> {
+    DAY.clone().run(InputType::UserInput)
 }

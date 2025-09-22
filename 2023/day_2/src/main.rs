@@ -1,5 +1,5 @@
+use library::input::{Day, InputType};
 use regex::Regex;
-use std::time::Instant;
 
 #[derive(Debug)]
 struct Game {
@@ -58,40 +58,44 @@ fn check_game(game: &Game, check: &Game) -> bool {
     check.red <= game.red && check.blue <= game.blue && check.green <= game.green
 }
 
-fn main() -> std::io::Result<()> {
-    let input = include_str!("../input.txt");
+const START_GAME: Game = Game {
+    red: 12,
+    green: 13,
+    blue: 14,
+};
 
-    let lines: Vec<&str> = input.lines().collect();
+struct Day2;
+const DAY: Day2 = Day2;
+impl Day<i32> for Day2 {
+    fn part_1(&self, input: &str) -> i32 {
+        let game = START_GAME;
 
-    let game = Game {
-        red: 12,
-        green: 13,
-        blue: 14,
-    };
+        let mut part_1_count: i32 = 0;
 
-    let mut part_1_count: i32 = 0;
-    let mut part_2_count: i32 = 0;
+        for line in input.lines() {
+            let game_id = get_regex_from_str(line, "Game ([0-9]{1,})");
+            let max_game = get_max_game_colours_from_line(line);
+            let result = check_game(&game, &max_game);
 
-    let start: Instant = Instant::now();
-
-    for line in lines {
-        let game_id = get_regex_from_str(line, "Game ([0-9]{1,})");
-        let max_game = get_max_game_colours_from_line(line);
-        let result = check_game(&game, &max_game);
-
-        if result {
-            part_1_count += game_id;
+            if result {
+                part_1_count += game_id;
+            }
         }
-        part_2_count += max_game.red * max_game.green * max_game.blue;
+        part_1_count
     }
-    let duration = start.elapsed();
-    println!("Time: {:?}", duration);
+    fn part_2(&self, input: &str) -> i32 {
+        let mut part_2_count: i32 = 0;
 
-    println!("part 1 result: {}", part_1_count);
+        for line in input.lines() {
+            let max_game = get_max_game_colours_from_line(line);
+            part_2_count += max_game.red * max_game.green * max_game.blue;
+        }
+        part_2_count
+    }
+}
 
-    println!("part 2 result: {}", part_2_count);
-
-    Ok(())
+fn main() -> std::io::Result<()> {
+    DAY.run(InputType::UserInput)
 }
 
 #[cfg(test)]
@@ -198,7 +202,7 @@ mod tests {
     }
     #[test]
     fn test_id_1() {
-        let line:String = "Game 1: 1 green, 2 blue; 15 blue, 12 red, 2 green; 4 red, 6 blue; 10 blue, 8 red; 3 red, 12 blue; 1 green, 12 red, 8 blue".to_string();
+        let line: String = "Game 1: 1 green, 2 blue; 15 blue, 12 red, 2 green; 4 red, 6 blue; 10 blue, 8 red; 3 red, 12 blue; 1 green, 12 red, 8 blue".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -210,7 +214,7 @@ mod tests {
     }
     #[test]
     fn test_id_2() {
-        let line:String = "Game 2: 5 green, 2 red, 18 blue; 18 blue, 6 red, 9 green; 6 blue, 3 green; 6 green, 1 red, 9 blue; 19 blue, 2 green, 6 red".to_string();
+        let line: String = "Game 2: 5 green, 2 red, 18 blue; 18 blue, 6 red, 9 green; 6 blue, 3 green; 6 green, 1 red, 9 blue; 19 blue, 2 green, 6 red".to_string();
         let game = Game {
             red: 12,
             green: 13,
@@ -222,7 +226,7 @@ mod tests {
     }
     #[test]
     fn test_id_3() {
-        let line:String = "Game 2: 5 green, 2 red, 18 blue; 18 blue, 6 red, 9 green; 6 blue, 3 green; 6 green, 1 red, 9 blue; 19 blue, 2 green, 6 red".to_string();
+        let line: String = "Game 2: 5 green, 2 red, 18 blue; 18 blue, 6 red, 9 green; 6 blue, 3 green; 6 green, 1 red, 9 blue; 19 blue, 2 green, 6 red".to_string();
         let game = Game {
             red: 12,
             green: 13,

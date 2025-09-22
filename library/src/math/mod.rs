@@ -1,52 +1,37 @@
-use num::{zero, one};
+use num::zero;
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 // Find GCD
 pub fn gcd<T>(mut a: T, mut b: T) -> T
 where
-    T: PartialEq
-    + std::ops::Rem<Output = T>
-    + PartialOrd
-    + Copy
-    + num::One,
+    T: PartialEq + Rem<Output = T> + PartialOrd + Copy + num::One + num::Zero,
 {
-    if a == b {
-        return a;
+    while b != zero() {
+        let temp = b;
+        b = a % b;
+        a = temp;
     }
-    if b > a {
-        let temp = a;
-        a = b;
-        b = temp;
-    }
-    while b > one() {
-        let temp = a;
-        a = b;
-        b = temp % b;
-    }
-    return a;
+    a
 }
 
 pub fn lcm<T>(a: T, b: T) -> T
 where
     T: Eq
-        + std::ops::Rem<Output = T>
+        + Rem<Output = T>
         + PartialOrd
         + Copy
         + From<u64>
-        + std::ops::Div
-        + std::ops::Mul<<T as std::ops::Div>::Output, Output = T>
-        + num::One,
+        + Div
+        + Mul<<T as Div>::Output, Output = T>
+        + num::One
+        + num::Zero,
 {
-    return a * (b / gcd(a, b));
+    a * (b / gcd(a, b))
 }
 
 pub fn sawtooth<T>(number: T, max: T) -> T
 where
-    T: PartialOrd 
-        + Rem<Output = T>
-        + Add<Output = T>
-        + Copy
-        + num::Zero,
+    T: PartialOrd + Rem<Output = T> + Add<Output = T> + Copy + num::Zero,
 {
     if number < zero() {
         (max + number % max) % max

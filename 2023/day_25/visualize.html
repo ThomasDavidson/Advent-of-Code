@@ -27,7 +27,7 @@
 
     function init_id(chart, label) {
       let index = chart.nodes.map((node) => node.name).indexOf(label)
-      if (index != -1) {
+      if (index !== -1) {
         return chart.nodes[index].id
       }
       let id = chart.next_id

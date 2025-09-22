@@ -1,116 +1,119 @@
-fn parse_input(input: &str) -> Vec<Vec<i64>> {
-    let mut reports: Vec<Vec<i64>> = Vec::new();
+use library::input::{Day, InputType};
 
-    for line in input.lines() {
-        let report: Vec<i64> = line
+struct Oasis {
+    reports: Vec<Prediction>,
+}
+
+impl Oasis {
+    fn parse(input: &str) -> Self {
+        Self {
+            reports: input.lines().map(Prediction::parse).collect(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Prediction {
+    prediction: Vec<Vec<i64>>,
+}
+impl Prediction {
+    fn parse(line: &str) -> Self {
+        let initial = line
             .split_whitespace()
             .filter_map(|s| s.parse::<i64>().ok())
             .collect();
 
-        // println!("report {:?}", report);
-        if report.len() > 0 {
-            reports.push(report);
+        Self {
+            prediction: vec![initial],
         }
     }
 
-    reports
-}
+    fn generate_difference(&mut self) {
+        let prediction: &mut Vec<i64> = self.prediction.last_mut().unwrap();
 
-fn generate_difference(prediction: &Vec<i64>) -> Vec<i64> {
-    let mut new_prediction: Vec<i64> = Vec::new();
+        let new_prediction: Vec<i64> = prediction[1..]
+            .iter()
+            .zip(prediction.iter())
+            .map(|(p1, p2)| p1 - p2)
+            .collect();
 
-    let new_prediciton_len = (prediction.len() - 1) as usize;
-
-    for i in 0..new_prediciton_len {
-        let diff = prediction[i + 1] - prediction[i];
-        new_prediction.push(diff)
+        self.prediction.push(new_prediction);
+    }
+    fn last_prediction(&self) -> bool {
+        self.prediction.last().unwrap().iter().all(|&a| a == 0)
     }
 
-    new_prediction
-}
+    fn extrapolate_forward(&mut self) {
+        let mut add = 0;
 
-fn day_1(report: &Vec<i64>) -> i64 {
-    let mut predictions: Vec<Vec<i64>> = Vec::new();
+        for row in self.prediction.iter_mut().rev() {
+            add += row.last().unwrap();
 
-    predictions.push(report.to_owned());
-
-    while !predictions.last().unwrap().iter().all(|&a| a == 0) {
-        let prediction = generate_difference(predictions.last().unwrap());
-
-        predictions.push(prediction);
-    }
-
-    for i in (0..predictions.len()).rev() {
-        // set bottom as zero
-        let is_bottom: bool = i == predictions.len() - 1;
-        let mut extrapolation: i64 = 0;
-        if !is_bottom {
-            let prev_row_last_num = predictions.get(i + 1).unwrap().last().unwrap();
-            let curr_row_last_num = predictions.get(i).unwrap().last().unwrap();
-            extrapolation = prev_row_last_num + curr_row_last_num;
+            row.push(add);
         }
-
-        let prediction: &mut Vec<i64> = predictions.get_mut(i).unwrap();
-        prediction.push(extrapolation);
     }
+    fn extrapolate_backword(&mut self) {
+        let mut add = 0;
 
-    predictions.first().unwrap().last().unwrap().to_owned()
-}
+        for row in self.prediction.iter_mut().rev() {
+            add = row.first().unwrap() - add;
 
-fn day_2(report: &Vec<i64>) -> i64 {
-    let mut predictions: Vec<Vec<i64>> = Vec::new();
-
-    predictions.push(report.to_owned());
-
-    while !predictions.last().unwrap().iter().all(|&a| a == 0) {
-        let prediction = generate_difference(predictions.last().unwrap());
-
-        predictions.push(prediction);
-    }
-
-    for i in (0..predictions.len()).rev() {
-        // set bottom as zero
-        let is_bottom: bool = i == predictions.len() - 1;
-        let mut extrapolation: i64 = 0;
-        if !is_bottom {
-            let prev_row_first_num = predictions.get(i + 1).unwrap().first().unwrap();
-            let curr_row_first_num = predictions.get(i).unwrap().first().unwrap();
-            extrapolation = curr_row_first_num - prev_row_first_num;
+            row.insert(0, add);
         }
-
-        let prediction: &mut Vec<i64> = predictions.get_mut(i).unwrap();
-        prediction.insert(0, extrapolation);
     }
-    predictions.get(0).unwrap().first().unwrap().to_owned()
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
+struct Day9;
+const DAY: Day9 = Day9;
+impl Day<i64> for Day9 {
+    fn part_1(&self, input: &str) -> i64 {
+        let mut oasis = Oasis::parse(input);
 
-    let reports = parse_input(input);
+        oasis
+            .reports
+            .iter_mut()
+            .map(|report| {
+                while !report.last_prediction() {
+                    report.generate_difference();
+                }
 
-    // println!("reports {:?}", reports);
+                report.extrapolate_forward();
 
-    let mut day_1_results: Vec<i64> = Vec::new();
-    for report in &reports {
-        let day_1_result = day_1(report);
-        day_1_results.push(day_1_result);
+                report
+                    .prediction
+                    .first()
+                    .unwrap()
+                    .last()
+                    .unwrap()
+                    .to_owned()
+            })
+            .sum::<i64>()
     }
+    fn part_2(&self, input: &str) -> i64 {
+        let oasis = Oasis::parse(input);
 
-    println!(
-        "day_1_result {:?}",
-        day_1_results.into_iter().reduce(|a, b| a + b).unwrap()
-    );
+        oasis
+            .reports
+            .into_iter()
+            .map(|mut report| {
+                while !report.last_prediction() {
+                    report.generate_difference();
+                }
 
-    let mut day_2_results: Vec<i64> = Vec::new();
-    for report in &reports {
-        let day_1_result = day_2(report);
-        day_2_results.push(day_1_result);
+                report.extrapolate_backword();
+
+                report
+                    .prediction
+                    .first()
+                    .unwrap()
+                    .first()
+                    .unwrap()
+                    .to_owned()
+            })
+            .sum::<i64>()
     }
+}
 
-    println!("day_2_results {:?}", day_2_results);
-    println!(
-        "day_2_result {:?}",
-        day_2_results.into_iter().reduce(|a, b| a + b).unwrap()
-    );
+fn main() -> std::io::Result<()> {
+    DAY.run(InputType::UserInput)
 }

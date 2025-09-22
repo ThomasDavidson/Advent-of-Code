@@ -1,149 +1,133 @@
-fn find_empty_space_vertical(image: &Vec<&str>) -> Vec<usize> {
-    let mut ret: Vec<usize> = image
-        .iter()
-        .enumerate()
-        .filter(|(_, line)| line.chars().all(|a| a == '.'))
-        .map(|(i, _)| i)
-        .collect();
+use itertools::Itertools;
+use library::grid::Vec2;
+use library::input::{Day, InputType};
 
-    ret.sort();
-    ret
-}
-
-fn find_empty_space_horizontal(image: &Vec<&str>) -> Vec<usize> {
-    let mut ret: Vec<usize> = Vec::new();
-
-    // iterate through columns in reverse so the column indexes don't get mixed up when adding columns
-    for i in (0..image.first().unwrap().len()).rev() {
-        let empty_columns: Vec<bool> = image
-            .clone()
-            .into_iter()
-            .map(|line| line.chars().nth(i).unwrap() == '.')
-            .collect();
-
-        let empty_column = empty_columns.iter().all(|&a| a == true);
-        // println!("{}: {:?}", i, empty_column);
-        if empty_column {
-            ret.push(i);
-        }
-    }
-
-    ret.sort();
-
-    ret
-}
-
-fn calculate_galaxies(image: Vec<&str>, expand_multiplier: usize) -> Vec<Coord> {
-    let mut galaxies: Vec<Coord> = image
-        .iter()
-        .enumerate()
-        .flat_map(|(y, lines)| {
-            lines
-                .chars()
-                .enumerate()
-                .map(move |(x, c)| (Coord { x: x, y: y }, c))
-        })
-        .filter(|&a| a.1 == '#')
-        .map(|a| a.0)
-        .collect();
-    // println!("Galaxies: {:?}", galaxies);
-
-    let empty_y = find_empty_space_vertical(&image);
-
-    for y in empty_y.iter().rev() {
-        // print!("y: {}: ", y);
-        // filter for galaxies bellow of the empty space
-        for galaxy in galaxies.iter_mut().filter(|a| a.y > *y) {
-            // print!("{:?} ", galaxy);
-            galaxy.y += (expand_multiplier - 1) as usize;
-        }
-        // println!("");
-    }
-
-    let empty_x = find_empty_space_horizontal(&image);
-    for x in empty_x.iter().rev() {
-        // print!("x: {}: ", x);
-        // filter for galaxies bellow of the empty space
-        for galaxy in galaxies.iter_mut().filter(|a| a.x > *x) {
-            // print!("{:?} ", galaxy);
-            galaxy.x += (expand_multiplier - 1) as usize;
-        }
-        // println!("");
-    }
-
-    // println!("Galaxies: {:?}", galaxies);
-
-    galaxies
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Ord, PartialOrd, Eq)]
-struct Coord {
-    x: usize,
-    y: usize,
-}
-impl Coord {
-    fn distance(&self, coord: &Coord) -> usize {
-        let x_diff = self.x.abs_diff(coord.x);
-        let y_diff = self.y.abs_diff(coord.y);
+#[derive(Copy, Clone)]
+struct Coords(Vec2<usize>);
+impl Coords {
+    fn distance(&self, coord: &Self) -> usize {
+        let x_diff = self.0.x.abs_diff(coord.0.x);
+        let y_diff = self.0.y.abs_diff(coord.0.y);
 
         x_diff + y_diff
     }
 }
 
-fn part_1(input: &str) -> usize {
-    let image: Vec<&str> = input.lines().collect();
-    let galaxies = calculate_galaxies(image, 2);
+struct Space {
+    space: Vec<Vec<char>>,
+}
+impl Space {
+    fn parse(input: &str) -> Self {
+        let space = input.lines().map(|line| line.chars().collect()).collect();
+        Self { space }
+    }
+    fn calculate_expanded_galaxies(&self, expand_multiplier: usize) -> Vec<Coords> {
+        let space_enum: Vec<(Coords, char)> = Vec2::enumerate(&self.space)
+            .into_iter()
+            .map(|(coord, c)| (Coords(coord), c))
+            .collect();
 
-    let mut answer: usize = 0;
+        let mut galaxies: Vec<Coords> = space_enum
+            .iter()
+            .filter(|&a| a.1 == '#')
+            .map(|a| a.0)
+            .collect();
 
-    for (i, galaxy1) in galaxies.iter().enumerate() {
-        for (j, galaxy2) in galaxies.iter().enumerate() {
-            if j >= i {
-                break;
+        let empty_y = self.find_empty_space_vertical();
+
+        for y in empty_y.iter().rev() {
+            // filter for galaxies bellow of the empty space
+            for galaxy in galaxies.iter_mut().filter(|a| a.0.y > *y) {
+                galaxy.0.y += expand_multiplier - 1;
             }
-            answer += galaxy1.distance(galaxy2);
         }
+
+        let empty_x = self.find_empty_space_horizontal();
+        for x in empty_x.iter().rev() {
+            // filter for galaxies bellow of the empty space
+            for galaxy in galaxies.iter_mut().filter(|a| a.0.x > *x) {
+                galaxy.0.x += expand_multiplier - 1;
+            }
+        }
+
+        galaxies
+    }
+    fn find_empty_space_vertical(&self) -> Vec<usize> {
+        let mut ret: Vec<usize> = self
+            .space
+            .iter()
+            .enumerate()
+            .filter(|(_, line)| line.iter().all(|a| a == &'.'))
+            .map(|(i, _)| i)
+            .collect();
+
+        ret.sort();
+        ret
     }
 
-    println!("Part one asnwer: {}", answer);
-    answer
-}
+    fn find_empty_space_horizontal(&self) -> Vec<usize> {
+        let mut ret: Vec<usize> = Vec::new();
 
-fn part_2(input: &str) -> usize {
-    let image: Vec<&str> = input.lines().collect();
-    let galaxies = calculate_galaxies(image, 1000000);
+        // iterate through columns in reverse so the column indexes don't get mixed up when adding columns
+        for i in (0..self.space.first().unwrap().len()).rev() {
+            let empty_columns: Vec<bool> = self
+                .space
+                .clone()
+                .into_iter()
+                .map(|line| line.get(i).unwrap() == &'.')
+                .collect();
 
-    let mut answer: usize = 0;
-
-    for (i, galaxy1) in galaxies.iter().enumerate() {
-        for (j, galaxy2) in galaxies.iter().enumerate() {
-            if j >= i {
-                break;
+            let empty_column = empty_columns.iter().all(|&a| a);
+            // println!("{}: {:?}", i, empty_column);
+            if empty_column {
+                ret.push(i);
             }
-            answer += galaxy1.distance(galaxy2);
         }
-    }
 
-    println!("Part two asnwer: {}", answer);
-    answer
+        ret.sort();
+
+        ret
+    }
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
+struct Day11;
+const DAY: Day11 = Day11;
+impl Day<usize> for Day11 {
+    fn part_1(&self, input: &str) -> usize {
+        let space = Space::parse(input);
+        let galaxies = space.calculate_expanded_galaxies(2);
 
-    part_1(input);
-    part_2(input);
+        galaxies
+            .iter()
+            .combinations(2)
+            .fold(0, |acc, comb| acc + comb[0].distance(comb[1]))
+    }
+    fn part_2(&self, input: &str) -> usize {
+        let space = Space::parse(input);
+        let galaxies: Vec<Coords> = space.calculate_expanded_galaxies(1000000);
+
+        galaxies
+            .iter()
+            .combinations(2)
+            .fold(0, |acc, comb| acc + comb[0].distance(comb[1]))
+    }
+}
+
+fn main() -> std::io::Result<()> {
+    DAY.run(InputType::UserInput)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{part_1, part_2};
+    use crate::Day11;
+    use library::input::Day;
+    const DAY: Day11 = Day11;
 
     #[test]
     fn test_part_1() {
         let input = include_str!("../example.txt");
 
-        let res = part_1(input);
+        let res = DAY.part_1(input);
 
         assert_eq!(res, 374);
     }
@@ -151,7 +135,7 @@ mod tests {
     fn test_part_2() {
         let input = include_str!("../example.txt");
 
-        let res = part_2(input);
+        let res = DAY.part_2(input);
 
         assert_eq!(res, 8410);
     }

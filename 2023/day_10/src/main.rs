@@ -1,6 +1,7 @@
 use colorize::AnsiColor;
 use library::grid::{Direction, UVec2};
-use std::{collections::HashSet, time::Instant};
+use library::input::{Day, InputType};
+use std::collections::HashSet;
 
 type Coord = UVec2<usize>;
 
@@ -16,7 +17,7 @@ enum Tile {
 }
 
 impl Tile {
-    fn symbol(&self) -> char {
+    fn _symbol(&self) -> char {
         match self {
             Self::NS => '│', //'|',\
 
@@ -73,13 +74,11 @@ impl HotSprings {
         if coord.check_bounds(width, height) {
             return None;
         }
-        return Some(&self.grid[coord.y][coord.x]);
+        Some(&self.grid[coord.y][coord.x])
     }
 
     fn get_tile(&self, coord: &Coord) -> Option<Tile> {
-        let Some(c) = self.get_char(coord) else {
-            return None;
-        };
+        let c = self.get_char(coord)?;
         Some(Tile::from_char(c))
     }
     fn get_tile_p2(&self, coord: &Coord) -> Option<Tile> {
@@ -96,17 +95,11 @@ impl HotSprings {
             .into_iter()
             // check if there is an adjacent tile
             .filter_map(|d| match *start_coord + d {
-                Ok(coord) => {
-                    // get tile
-                    match self.get_tile(&coord) {
-                        Some(tile) => Some((d, tile)),
-                        None => None,
-                    }
-                }
+                Ok(coord) => self.get_tile(&coord).map(|tile| (d, tile)),
                 Err(_) => None,
             })
             // reverse directions for origin pipe
-            // check if the tile has a pipe pointing twords it
+            // check if the tile has a pipe pointing towards it
             .filter_map(|(d, adjacent_tile)| {
                 let adjacent_pipe_directions = adjacent_tile.pipe_directions();
                 if adjacent_tile != Tile::None && adjacent_pipe_directions.contains(&d.inverse()) {
@@ -134,11 +127,11 @@ impl HotSprings {
         Some(cmp[pipe_index].0)
     }
 
-    fn debug_visited(&self, visited: &HashSet<Coord>, p: Option<Coord>, n: Option<Coord>) {
+    fn _debug_visited(&self, visited: &HashSet<Coord>, p: Option<Coord>, n: Option<Coord>) {
         for (y, line) in self.grid.iter().enumerate() {
             for (x, _c) in line.iter().enumerate() {
                 let coord = Coord::new(x, y);
-                let debug = self.get_tile_p2(&coord).unwrap().symbol();
+                let debug = self.get_tile_p2(&coord).unwrap()._symbol();
 
                 if Some(coord) == n {
                     print!("{}", format!("{debug}").green());
@@ -153,11 +146,11 @@ impl HotSprings {
             println!();
         }
     }
-    fn debug(&self) {
+    fn _debug(&self) {
         for (y, line) in self.grid.iter().enumerate() {
             for (x, _c) in line.iter().enumerate() {
                 let coord = Coord::new(x, y);
-                let debug = self.get_tile_p2(&coord).unwrap().symbol();
+                let debug = self.get_tile_p2(&coord).unwrap()._symbol();
 
                 print!("{}", &debug);
             }
@@ -190,7 +183,7 @@ impl HotSprings {
 
             let next_tile = self.get_char(&next_coord).unwrap();
 
-            let next_dirs = get_tile_connections(&next_tile);
+            let next_dirs = get_tile_connections(next_tile);
 
             // switch direction
             let required_dir = dir.inverse();
@@ -203,7 +196,7 @@ impl HotSprings {
             // sets to opposite of current_direction
             return Some((next_coord, required_dir));
         }
-        return None;
+        None
     }
 }
 
@@ -246,46 +239,10 @@ fn get_start(input: &str) -> Option<Coord> {
     None
 }
 
-fn part_1(input: &str) -> u64 {
-    let mut part_1_answer: u64 = 0;
-
-    let hotsprings = HotSprings::from_str(input);
-    hotsprings.debug();
-
-    let starting_point = match get_start(input) {
-        Some(a) => a,
-        None => panic!("No start"),
-    };
-
-    let mut current_location = starting_point;
-    let mut back: Direction = Direction::None;
-
-    // the number of nodes searched will never be larger than the size of the input
-    loop {
-        let current_symbol = hotsprings.get_char(&current_location).unwrap();
-
-        part_1_answer += 1;
-
-        let next_tile_res = hotsprings.get_next_tile(back, *current_symbol, current_location);
-        match next_tile_res {
-            Some(a) => {
-                current_location = a.0;
-                back = a.1;
-            }
-            None => panic!("Hit dead end"),
-        }
-        if current_location == starting_point {
-            break;
-        }
-    }
-
-    part_1_answer / 2
-}
-
-fn shoe_string(hotsprings: HotSprings) -> u64 {
+fn shoe_string(hot_springs: HotSprings) -> u64 {
     let mut inside: HashSet<Coord> = HashSet::new();
-    let height = hotsprings.grid.len();
-    let width = hotsprings.grid[0].len();
+    let height = hot_springs.grid.len();
+    let width = hot_springs.grid[0].len();
 
     let mut prev = Tile::None;
     let mut visited: HashSet<Coord> = HashSet::new();
@@ -295,7 +252,7 @@ fn shoe_string(hotsprings: HotSprings) -> u64 {
 
         for x in 0..width {
             let coord = Coord::new(x, y);
-            let tile = &hotsprings.get_tile_p2(&coord).unwrap();
+            let tile = &hot_springs.get_tile_p2(&coord).unwrap();
 
             if prev == Tile::SE && tile == &Tile::NW {
                 // ┌┘
@@ -313,105 +270,133 @@ fn shoe_string(hotsprings: HotSprings) -> u64 {
                 visited.insert(coord);
             }
             if tile != &Tile::EW {
-                prev = tile.clone();
+                prev = *tile;
             }
         }
     }
 
-    hotsprings.debug_visited(&visited, None, None);
     inside.iter().len() as u64
 }
 
-fn part_2(input: &str) -> u64 {
-    let mut visited: HashSet<Coord> = HashSet::new();
+struct Day10;
+const DAY: Day10 = Day10;
+impl Day<u64> for Day10 {
+    fn part_1(&self, input: &str) -> u64 {
+        let mut part_1_answer: u64 = 0;
 
-    let mut hotsprings = HotSprings::from_str(input);
+        let hot_springs = HotSprings::from_str(input);
 
-    let starting_point = match get_start(input) {
-        Some(a) => a,
-        None => panic!("No start"),
-    };
+        let starting_point = match get_start(input) {
+            Some(a) => a,
+            None => panic!("No start"),
+        };
 
-    let mut current_location = starting_point;
-    let mut back: Direction = Direction::None;
+        let mut current_location = starting_point;
+        let mut back: Direction = Direction::None;
 
-    // the number of nodes searched will never be larger than the size of the input
-    loop {
-        visited.insert(current_location);
-        let current_symbol = hotsprings.get_char(&current_location).unwrap();
+        // the number of nodes searched will never be larger than the size of the input
+        loop {
+            let current_symbol = hot_springs.get_char(&current_location).unwrap();
 
-        let next_tile_res = hotsprings.get_next_tile(back, *current_symbol, current_location);
-        match next_tile_res {
-            Some(a) => {
-                current_location = a.0;
-                back = a.1;
+            part_1_answer += 1;
+
+            let next_tile_res = hot_springs.get_next_tile(back, *current_symbol, current_location);
+            match next_tile_res {
+                Some(a) => {
+                    current_location = a.0;
+                    back = a.1;
+                }
+                None => panic!("Hit dead end"),
             }
-            None => panic!("Hit dead end"),
-        }
-        if current_location == starting_point {
-            break;
-        }
-    }
-
-    for (y, line) in hotsprings.grid.iter_mut().enumerate() {
-        for (x, c) in line.iter_mut().enumerate() {
-            let coord = Coord::new(x, y);
-            if !visited.contains(&coord) {
-                *c = '.';
+            if current_location == starting_point {
+                break;
             }
         }
-    }
-    println!();
-    hotsprings.debug();
 
-    shoe_string(hotsprings)
+        part_1_answer / 2
+    }
+    fn part_2(&self, input: &str) -> u64 {
+        let mut visited: HashSet<Coord> = HashSet::new();
+
+        let mut hot_springs = HotSprings::from_str(input);
+
+        let starting_point = match get_start(input) {
+            Some(a) => a,
+            None => panic!("No start"),
+        };
+
+        let mut current_location = starting_point;
+        let mut back: Direction = Direction::None;
+
+        // the number of nodes searched will never be larger than the size of the input
+        loop {
+            visited.insert(current_location);
+            let current_symbol = hot_springs.get_char(&current_location).unwrap();
+
+            let next_tile_res = hot_springs.get_next_tile(back, *current_symbol, current_location);
+            match next_tile_res {
+                Some(a) => {
+                    current_location = a.0;
+                    back = a.1;
+                }
+                None => panic!("Hit dead end"),
+            }
+            if current_location == starting_point {
+                break;
+            }
+        }
+
+        for (y, line) in hot_springs.grid.iter_mut().enumerate() {
+            for (x, c) in line.iter_mut().enumerate() {
+                let coord = Coord::new(x, y);
+                if !visited.contains(&coord) {
+                    *c = '.';
+                }
+            }
+        }
+
+        shoe_string(hot_springs)
+    }
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
-
-    let start: Instant = Instant::now();
-    let part_1_answer = part_1(&input);
-    let duration = start.elapsed();
-    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
-
-    let start: Instant = Instant::now();
-    let part_2_answer = part_2(&input);
-    let duration = start.elapsed();
-    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
+fn main() -> std::io::Result<()> {
+    DAY.run(InputType::UserInput)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::part_2;
+    use crate::Day10;
+    use library::input::Day;
+    const DAY: Day10 = Day10;
+
     #[test]
     fn test_example_1() {
         let input = include_str!("../example.txt");
-        let result = part_2(input);
+        let result = DAY.part_2(input);
         assert_eq!(result, 1);
     }
     #[test]
     fn test_example_4() {
         let input = include_str!("../example4.txt");
-        let result = part_2(input);
+        let result = DAY.part_2(input);
         assert_eq!(result, 4);
     }
     #[test]
     fn test_example_5() {
         let input = include_str!("../example5.txt");
-        let result = part_2(input);
+        let result = DAY.part_2(input);
         assert_eq!(result, 8);
     }
     #[test]
     fn test_example_6() {
         let input = include_str!("../example6.txt");
-        let result = part_2(input);
+        let result = DAY.part_2(input);
         assert_eq!(result, 4);
     }
     #[test]
     fn test_example_7() {
         let input = include_str!("../example7.txt");
-        let result = part_2(input);
+        let result = DAY.part_2(input);
         assert_eq!(result, 10);
     }
 }

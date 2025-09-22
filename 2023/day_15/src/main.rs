@@ -1,98 +1,133 @@
-use std::{ops::Rem, time::Instant};
+use library::grid::Vec2;
+use library::input::{Day, InputType};
+use std::fmt;
 
-fn hash_algorithm(string: &str) -> usize {
-    string
-        .chars()
-        .fold(0, |acc, c| ((acc + c as usize) * 17).rem(256))
+fn hash_algorithm(chars: impl Iterator<Item = char>) -> usize {
+    chars.fold(0, |mut acc, c| {
+        acc += c as usize;
+        acc *= 17;
+        acc %= 256;
+        acc
+    })
 }
 
-fn part_1(strings: &Vec<&str>) -> usize {
-    strings
-        .iter()
-        .fold(0, |acc, string| acc + hash_algorithm(string))
+type Label = Vec<char>;
+#[derive(Debug)]
+enum Operation {
+    Dash { label: Label },
+    Equal { label: Label, focal_length: u32 },
 }
-
-fn part_2(strings: &Vec<&str>) -> usize {
-    let mut boxes: [Vec<Lens>; 256] = std::array::from_fn(|_| Vec::new());
-
-    for string in strings {
-        let (label, instr, focal_length_str): (&str, &str, Option<&str>) =
+impl Operation {
+    fn parse(string: &str) -> Self {
+        let (label, focal_length_str): (&str, Option<u32>) =
             match string.split_at(string.chars().position(|a| a == '=' || a == '-').unwrap()) {
-                (label, "-") => (label, "-", None),
+                (label, "-") => (label, None),
                 (label, instr_lens_comb) => {
-                    let (instr, lens) = instr_lens_comb.split_at(1);
-                    (label, instr, Some(lens))
+                    let (_, lens) = instr_lens_comb.split_at(1);
+                    (label, Some(lens.parse().unwrap()))
                 }
             };
 
-        let focal_length = match focal_length_str {
-            Some(a) => match a.parse() {
-                Ok(a) => a,
-                Err(a) => panic!("{:?} {:?}", a, focal_length_str),
+        let label = label.chars().collect();
+
+        match focal_length_str {
+            None => Self::Dash { label },
+            Some(focal_length) => Self::Equal {
+                label,
+                focal_length,
             },
-            None => 0,
-        };
-
-        let label_char_vec: Vec<char> = label.chars().take(2).collect();
-        let label_char_array: [char; 2] = label_char_vec.try_into().unwrap();
-
-        let box_num = hash_algorithm(label);
-
-        // println!("{} {} {} {:?}", box_num, label, instr, focal_length);
-
-        match instr {
-            "-" => boxes[box_num]
-                .iter()
-                .position(|&a| a.label == label_char_array)
-                .map(|e| boxes[box_num].remove(e))
-                .is_some(),
-            "=" => {
-                match boxes[box_num]
-                    .iter()
-                    .position(|&a| a.label == label_char_array)
-                {
-                    None => boxes[box_num].push(Lens {
-                        label: label_char_array,
-                        focal_length: focal_length,
-                    }),
-                    Some(a) => boxes[box_num][a].focal_length = focal_length,
-                };
-                true
-            }
-            _ => panic!("Invalid instruction"),
-        };
-    }
-    let mut day_2_answer = 0;
-    for (i, box_) in boxes.iter().enumerate() {
-        for (j, lens) in box_.iter().enumerate() {
-            let lens_sum = (i + 1) * (j + 1) * lens.focal_length;
-            day_2_answer += lens_sum;
-            // println!("lens answer: {}", lens_sum);
         }
     }
-    day_2_answer
+    fn label(&self) -> &Label {
+        match self {
+            Self::Dash { label } => label,
+            Self::Equal {
+                label,
+                focal_length: _,
+            } => label,
+        }
+    }
+}
+impl fmt::Display for Operation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            Self::Dash { label } => {
+                write!(f, "{}{}-", label[0], label[1])?;
+            }
+            Self::Equal {
+                label,
+                focal_length,
+            } => {
+                write!(f, "{}{}={focal_length}", label[0], label[1])?;
+            }
+        }
+        Ok(())
+    }
 }
 
-#[derive(Default, Debug, PartialEq, Clone, Copy)]
+#[derive(Default, Debug, PartialEq, Clone)]
 struct Lens {
-    label: [char; 2],
+    label: Label,
     focal_length: usize,
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
+impl fmt::Display for Lens {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "[{}{} {}]",
+            self.label[0], self.label[1], self.focal_length
+        )
+    }
+}
 
-    let strings: Vec<&str> = input.split(",").collect();
+struct Day15;
+const DAY: Day15 = Day15;
+impl Day<usize> for Day15 {
+    fn part_1(&self, input: &str) -> usize {
+        input
+            .split(",")
+            .map(|c| c.chars())
+            .map(hash_algorithm)
+            .sum()
+    }
+    fn part_2(&self, input: &str) -> usize {
+        let mut boxes: [Vec<Lens>; 256] = std::array::from_fn(|_| Vec::new());
 
-    let start: Instant = Instant::now();
+        for string in input.split(",") {
+            let operation = Operation::parse(string);
 
-    let part_1_answer = part_1(&strings);
-    let duration = start.elapsed();
-    println!("Part 1 anwer: {}, time: {:?}", part_1_answer, duration);
+            let box_num = hash_algorithm(operation.label().iter().cloned());
 
-    let start: Instant = Instant::now();
+            match operation {
+                Operation::Dash { label } => {
+                    boxes[box_num]
+                        .iter()
+                        .position(|a| a.label == label)
+                        .map(|e| boxes[box_num].remove(e));
+                }
+                Operation::Equal {
+                    label,
+                    focal_length,
+                } => {
+                    match boxes[box_num].iter().position(|a| a.label == label) {
+                        None => boxes[box_num].push(Lens {
+                            label,
+                            focal_length: focal_length as usize,
+                        }),
+                        Some(a) => boxes[box_num][a].focal_length = focal_length as usize,
+                    };
+                }
+            };
+        }
 
-    let part_2_answer = part_2(&strings);
-    let duration = start.elapsed();
-    println!("Part 2 anwer: {}, time: {:?}", part_2_answer, duration);
+        let boxes: Vec<Vec<Lens>> = boxes.to_vec();
+        Vec2::enumerate(&boxes).iter().fold(0, |acc, (c, lens)| {
+            acc + (c.x + 1) * (c.y + 1) * lens.focal_length
+        })
+    }
+}
+
+fn main() -> std::io::Result<()> {
+    DAY.run(InputType::UserInput)
 }

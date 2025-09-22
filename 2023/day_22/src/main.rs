@@ -1,5 +1,6 @@
 use core::fmt;
-use std::{collections::HashMap, fmt::Formatter, hash::Hash, time::Instant};
+use library::input::{Day, InputType};
+use std::{collections::HashMap, fmt::Formatter, hash::Hash};
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 struct Coords3D {
@@ -11,7 +12,8 @@ impl Coords3D {
     fn from_str(str: &str) -> Self {
         let split: Vec<usize> = str
             .split(",")
-            .map(|split_str| split_str.parse::<usize>().unwrap())
+            .map(str::parse::<usize>)
+            .map(Result::unwrap)
             .collect();
         Self {
             x: split[0],
@@ -21,8 +23,8 @@ impl Coords3D {
     }
     fn get_field(&self, axis3d: &Axis3D) -> usize {
         match axis3d {
-            Axis3D::X => self.x,
-            Axis3D::Y => self.y,
+            Axis3D::_X => self.x,
+            Axis3D::_Y => self.y,
             Axis3D::Z => self.z,
         }
     }
@@ -34,12 +36,12 @@ impl Coords3D {
         let csc_1 = cross_section_coords.0;
         let csc_2 = cross_section_coords.1;
         match orientation {
-            Axis3D::X => Coords3D {
+            Axis3D::_X => Coords3D {
                 x: axis_coord,
                 y: csc_1,
                 z: csc_2,
             },
-            Axis3D::Y => Coords3D {
+            Axis3D::_Y => Coords3D {
                 x: csc_1,
                 y: axis_coord,
                 z: csc_2,
@@ -53,11 +55,11 @@ impl Coords3D {
     }
     fn translate(self, offset: i32, axis3d: &Axis3D) -> Self {
         match axis3d {
-            Axis3D::X => Coords3D {
+            Axis3D::_X => Coords3D {
                 x: (self.x as i32 + offset) as usize,
                 ..self
             },
-            Axis3D::Y => Coords3D {
+            Axis3D::_Y => Coords3D {
                 y: (self.y as i32 + offset) as usize,
                 ..self
             },
@@ -85,22 +87,22 @@ impl AxisOrientation3D {
     }
     fn from_axis(axis: &Axis3D) -> Self {
         match axis {
-            Axis3D::X => Self::YZ,
-            Axis3D::Y => Self::XZ,
+            Axis3D::_X => Self::YZ,
+            Axis3D::_Y => Self::XZ,
             Axis3D::Z => Self::XY,
         }
     }
 }
 #[derive(Debug, PartialEq)]
 enum Axis3D {
-    X,
-    Y,
+    _X,
+    _Y,
     Z,
 }
 
 #[derive(Debug)]
 struct Block {
-    orientation: AxisOrientation3D,
+    _orientation: AxisOrientation3D,
     block_parts: Vec<Coords3D>,
 }
 
@@ -131,20 +133,20 @@ impl Block {
             }
         }
         Self {
-            orientation,
+            _orientation: orientation,
             block_parts,
         }
     }
-    fn lowest_part(&self, axis: Axis3D) -> usize {
+    fn _lowest_part(&self, axis: Axis3D) -> usize {
         match axis {
-            Axis3D::X => {
+            Axis3D::_X => {
                 self.block_parts
                     .iter()
                     .min_by(|a, b| a.x.cmp(&b.x))
                     .unwrap()
                     .x
             }
-            Axis3D::Y => {
+            Axis3D::_Y => {
                 self.block_parts
                     .iter()
                     .min_by(|a, b| a.y.cmp(&b.y))
@@ -170,7 +172,7 @@ struct SandStack {
 
 impl SandStack {
     fn from_str(input: &str) -> Self {
-        let blocks: Vec<Block> = input.lines().map(|line| Block::from_string(line)).collect();
+        let blocks: Vec<Block> = input.lines().map(Block::from_string).collect();
 
         let mut coords = HashMap::new();
         let mut limit = Coords3D { x: 0, y: 0, z: 0 };
@@ -180,9 +182,9 @@ impl SandStack {
         for block in blocks {
             block_ident += 1;
             for block_part in block.block_parts {
-                limit.x = limit.x.max(block_part.x);
-                limit.y = limit.y.max(block_part.y);
-                limit.z = limit.z.max(block_part.z);
+                limit.x = usize::max(limit.x, block_part.x);
+                limit.y = usize::max(limit.y, block_part.y);
+                limit.z = usize::max(limit.z, block_part.z);
 
                 coords.insert(block_part, block_ident);
             }
@@ -191,7 +193,7 @@ impl SandStack {
         SandStack { limit, coords }
     }
     fn settle_block(self, ident: usize, axis3d: &Axis3D) -> Self {
-        assert!(*axis3d == Axis3D::Z);
+        assert_eq!(*axis3d, Axis3D::Z);
         // get blocks
         let block_move: Vec<Coords3D> = self
             .clone()
@@ -201,12 +203,12 @@ impl SandStack {
             .map(|bm| bm.0)
             .collect();
 
-        // find first block that this block would colide with
+        // find first block that this block would collide with
         let cross_section_coords: Vec<(usize, usize)> =
             block_move.iter().map(|bm| (bm.x, bm.y)).collect();
 
-        // a is the axis that is bing moved
-        let Some(a_min) = block_move.iter().map(|c| c.get_field(&axis3d)).min() else {
+        // the a variable is the axis that is bing moved
+        let Some(a_min) = block_move.iter().map(|c| c.get_field(axis3d)).min() else {
             return self;
         };
 
@@ -214,14 +216,14 @@ impl SandStack {
         let mut supporting_level = 0;
         'outer: for a in (1..a_min).rev() {
             for cross_section_coord in &cross_section_coords {
-                let coords = Coords3D::new_from_cross_section(a, cross_section_coord, &axis3d);
-                if self.coords.get(&coords).is_some() {
+                let coords = Coords3D::new_from_cross_section(a, cross_section_coord, axis3d);
+                if self.coords.contains_key(&coords) {
                     supporting_level = a;
                     break 'outer;
                 }
             }
         }
-        // check if the block is alread settled
+        // check if the block is already settled
         let offset: i32 = supporting_level as i32 - a_min as i32 + 1;
 
         if offset == 0 {
@@ -236,7 +238,7 @@ impl SandStack {
         }
 
         for b in block_move {
-            let new_block = b.translate(offset, &axis3d);
+            let new_block = b.translate(offset, axis3d);
             new_stack.insert(new_block, ident);
         }
 
@@ -248,8 +250,8 @@ impl SandStack {
 
     fn settle_blocks(self, axis3d: &Axis3D) -> Self {
         let limit = match axis3d {
-            Axis3D::X => self.limit.x,
-            Axis3D::Y => self.limit.y,
+            Axis3D::_X => self.limit.x,
+            Axis3D::_Y => self.limit.y,
             Axis3D::Z => self.limit.z,
         };
         let slice_orientation = AxisOrientation3D::from_axis(axis3d);
@@ -264,7 +266,7 @@ impl SandStack {
             idents.dedup();
 
             for ident in idents {
-                settled = settled.settle_block(ident, &axis3d)
+                settled = settled.settle_block(ident, axis3d)
             }
         }
 
@@ -284,7 +286,7 @@ impl SandStack {
         coord: usize,
         positive_direction: bool,
     ) -> Vec<(usize, Vec<usize>)> {
-        assert!(axis == AxisOrientation3D::XY);
+        assert_eq!(axis, AxisOrientation3D::XY);
 
         let base_slice = self.get_slice(&axis, coord);
 
@@ -344,135 +346,132 @@ impl fmt::Display for SandStack {
     }
 }
 
-// check how many items are being supported by counting unique identiers
-fn get_num_supported(supported: &Vec<(usize, Vec<usize>)>) -> usize {
-    let mut supported_list: Vec<usize> = supported.iter().map(|r| r.1.clone()).flatten().collect();
+// check how many items are being supported by counting unique identifiers
+fn get_num_supported(supported: &[(usize, Vec<usize>)]) -> usize {
+    let mut supported_list: Vec<usize> = supported.iter().flat_map(|r| r.1.clone()).collect();
     supported_list.sort();
     supported_list.dedup();
     supported_list.len()
 }
 
-fn part_1(input: &str) -> usize {
-    let sand_stack = SandStack::from_str(input);
+#[derive(Clone)]
+struct Day18;
+const DAY: Day18 = Day18;
+impl Day<usize> for Day18 {
+    fn part_1(&self, input: &str) -> usize {
+        let sand_stack = SandStack::from_str(input);
 
-    let settled_sand_blocks = sand_stack.settle_blocks(&Axis3D::Z);
+        let settled_sand_blocks = sand_stack.settle_blocks(&Axis3D::Z);
 
-    let supported_each_level: Vec<Vec<(usize, Vec<usize>)>> = (0..(settled_sand_blocks.limit.z))
-        .rev()
-        .map(|z| settled_sand_blocks.get_supported_blocks(AxisOrientation3D::XY, z, true))
-        .collect();
-
-    // remove reduncant blocks
-    // if block is supported by more than one block then add it to the remove list
-    // check if removing a block from the block list
-    // start with the block that is supporting the least amount of blocks
-
-    let remove_lists: Vec<Vec<(usize, Vec<usize>)>> = supported_each_level.into_iter().collect();
-
-    let mut blocks_removed: usize = 0;
-    for mut remove_list in remove_lists {
-        let num_supported = get_num_supported(&remove_list);
-        // sort so item that supports the least amount gets removed first
-        remove_list.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
-
-        for (i, _remove) in remove_list.iter().enumerate() {
-            let mut test_remove_list = remove_list.clone();
-            test_remove_list.remove(i);
-            if num_supported == get_num_supported(&test_remove_list) {
-                blocks_removed += 1;
-            }
-        }
-    }
-    blocks_removed
-}
-
-fn part_2(input: &str) -> usize {
-    let sand_stack = SandStack::from_str(input);
-    let settled_sand_blocks = sand_stack.settle_blocks(&Axis3D::Z);
-
-    // ignore first layer because it isn't supported by any blocks
-    let blocks_bellow: Vec<Vec<(usize, Vec<usize>)>> = (1..=settled_sand_blocks.limit.z)
-        .map(|z| settled_sand_blocks.get_supported_blocks(AxisOrientation3D::XY, z, false))
-        .collect();
-
-    let mut collapse_by_map: HashMap<usize, Vec<usize>> = HashMap::new();
-
-    for (block_ident, blocks_bellow) in blocks_bellow.iter().flatten() {
-        // let blocks_bellow = blocks_bellow_hash.get(&block_ident).unwrap();
-        let mut collapse_by_list: Vec<usize> = Vec::new();
-
-        if blocks_bellow.len() == 1 {
-            collapse_by_list.push(blocks_bellow[0]);
-        }
-        let blocks_bellow_collapse: Vec<Option<&Vec<usize>>> = blocks_bellow
-            .iter()
-            .map(|block_bellow| collapse_by_map.get(block_bellow))
+        let supported_each_level: Vec<Vec<(usize, Vec<usize>)>> = (0..settled_sand_blocks.limit.z)
+            .rev()
+            .map(|z| settled_sand_blocks.get_supported_blocks(AxisOrientation3D::XY, z, true))
             .collect();
 
-        // only add if all bellow it can be collapsed
-        if blocks_bellow_collapse.len() > 0
-            && blocks_bellow_collapse.iter().all(|blocks| blocks.is_some())
-        {
-            // list if collapse sources from each block bellow it
-            let blocks_bellow_collapse: Vec<Vec<usize>> = blocks_bellow_collapse
-                .iter()
-                .map(|block| block.unwrap().clone())
-                .collect();
+        // remove redundant blocks
+        // if block is supported by more than one block then add it to the remove list
+        // check if removing a block from the block list
+        // start with the block that is supporting the least amount of blocks
 
-            // list of unique values from each vector in blocks_bellow_collapse
-            let mut unique_values_bellow_collapse: Vec<&usize> =
-                blocks_bellow_collapse.iter().flatten().collect();
-            unique_values_bellow_collapse.sort();
-            unique_values_bellow_collapse.dedup();
+        let remove_lists: Vec<Vec<(usize, Vec<usize>)>> =
+            supported_each_level.into_iter().collect();
 
-            for ident in unique_values_bellow_collapse {
-                if blocks_bellow_collapse
-                    .iter()
-                    .all(|block| block.contains(ident))
-                {
-                    collapse_by_list.push(*ident);
+        let mut blocks_removed: usize = 0;
+        for mut remove_list in remove_lists {
+            let num_supported = get_num_supported(&remove_list);
+            // sort so item that supports the least amount gets removed first
+            remove_list.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+
+            for (i, _remove) in remove_list.iter().enumerate() {
+                let mut test_remove_list = remove_list.clone();
+                test_remove_list.remove(i);
+                if num_supported == get_num_supported(&test_remove_list) {
+                    blocks_removed += 1;
                 }
             }
         }
-        collapse_by_map.insert(*block_ident, collapse_by_list);
+        blocks_removed
     }
+    fn part_2(&mut self, input: &str) -> usize {
+        let sand_stack = SandStack::from_str(input);
+        let settled_sand_blocks = sand_stack.settle_blocks(&Axis3D::Z);
 
-    collapse_by_map.values().fold(0, |a, b| a + b.len())
+        // ignore first layer because it isn't supported by any blocks
+        let blocks_bellow: Vec<Vec<(usize, Vec<usize>)>> = (1..=settled_sand_blocks.limit.z)
+            .map(|z| settled_sand_blocks.get_supported_blocks(AxisOrientation3D::XY, z, false))
+            .collect();
+
+        let mut collapse_by_map: HashMap<usize, Vec<usize>> = HashMap::new();
+
+        for (block_ident, blocks_bellow) in blocks_bellow.iter().flatten() {
+            // let blocks_bellow = blocks_bellow_hash.get(&block_ident).unwrap();
+            let mut collapse_by_list: Vec<usize> = Vec::new();
+
+            if blocks_bellow.len() == 1 {
+                collapse_by_list.push(blocks_bellow[0]);
+            }
+            let blocks_bellow_collapse: Vec<Option<&Vec<usize>>> = blocks_bellow
+                .iter()
+                .map(|block_bellow| collapse_by_map.get(block_bellow))
+                .collect();
+
+            // only add if all bellow it can be collapsed
+            if !blocks_bellow_collapse.is_empty()
+                && blocks_bellow_collapse.iter().all(|blocks| blocks.is_some())
+            {
+                // list if collapse sources from each block bellow it
+                let blocks_bellow_collapse: Vec<Vec<usize>> = blocks_bellow_collapse
+                    .iter()
+                    .map(|block| block.unwrap().clone())
+                    .collect();
+
+                // list of unique values from each vector in blocks_bellow_collapse
+                let mut unique_values_bellow_collapse: Vec<&usize> =
+                    blocks_bellow_collapse.iter().flatten().collect();
+                unique_values_bellow_collapse.sort();
+                unique_values_bellow_collapse.dedup();
+
+                for ident in unique_values_bellow_collapse {
+                    if blocks_bellow_collapse
+                        .iter()
+                        .all(|block| block.contains(ident))
+                    {
+                        collapse_by_list.push(*ident);
+                    }
+                }
+            }
+            collapse_by_map.insert(*block_ident, collapse_by_list);
+        }
+
+        collapse_by_map.values().fold(0, |a, b| a + b.len())
+    }
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
-
-    let start: Instant = Instant::now();
-    let part_1_answer = part_1(&input);
-    let duration = start.elapsed();
-    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
-
-    let start: Instant = Instant::now();
-    let part_2_answer = part_2(&input);
-    let duration = start.elapsed();
-    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
+fn main() -> std::io::Result<()> {
+    DAY.clone().run(InputType::UserInput)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::part_2;
+    use crate::Day18;
+    use library::input::Day;
+    const DAY: Day18 = Day18;
     #[test]
     fn test1() {
         let input = include_str!("../example.txt");
-        let result = part_2(input);
+        let result = DAY.part_2(input);
         assert_eq!(result, 7);
     }
     #[test]
     fn test2() {
         let input = include_str!("../example2.txt");
-        let result = part_2(input);
+        let result = DAY.part_2(input);
         assert_eq!(result, 1);
     }
     #[test]
     fn test3() {
         let input = include_str!("../example3.txt");
-        let result = part_2(input);
+        let result = DAY.part_2(input);
         assert_eq!(result, 5);
     }
 }

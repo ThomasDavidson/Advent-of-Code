@@ -1,4 +1,5 @@
 use library::grid::Direction;
+use library::input::{Day, InputType};
 use shoelace::{Area, Point};
 #[derive(Debug)]
 struct Instruction {
@@ -23,10 +24,7 @@ fn part_1_decode_instructions(input: &str) -> Vec<Instruction> {
                 Ok(a) => a,
                 Err(e) => panic!("{:?}", e),
             };
-            Instruction {
-                direction: direction,
-                length: length,
-            }
+            Instruction { direction, length }
         })
         .collect()
 }
@@ -36,8 +34,6 @@ fn part_2_decode_instructions(input: &str) -> Vec<Instruction> {
         .lines()
         .map(|line| {
             let split: Vec<&str> = line.split(['(', ')']).collect();
-            // let hex_str: Vec<char> = split[1].chars().collect();
-            // let array_of_chars: [char; 7] = hex_str.try_into().unwrap();
             let instruction_str = split[1].to_string();
 
             let length_str = &instruction_str[1..6];
@@ -54,10 +50,7 @@ fn part_2_decode_instructions(input: &str) -> Vec<Instruction> {
                 a => panic!("Invalid hex code {a} {:?}", direction_str),
             };
 
-            Instruction {
-                length: length,
-                direction: direction,
-            }
+            Instruction { length, direction }
         })
         .collect()
 }
@@ -73,9 +66,9 @@ fn calculate_area_from_instructions(instructions: Vec<Instruction>) -> u64 {
     for instruction in &instructions {
         let (offset_x, offset_y): (i64, i64) = {
             match (instruction.direction, instruction.length) {
-                (Direction::East, len) => ((len as i64) as i64, 0),
+                (Direction::East, len) => (len as i64, 0),
                 (Direction::West, len) => (-(len as i64), 0),
-                (Direction::North, len) => (0, (len as i64)),
+                (Direction::North, len) => (0, len as i64),
                 (Direction::South, len) => (0, -(len as i64)),
                 _ => panic!("Unused Dir"),
             }
@@ -91,7 +84,7 @@ fn calculate_area_from_instructions(instructions: Vec<Instruction>) -> u64 {
 
     let block_coord: Vec<Point> = block_coord
         .into_iter()
-        .map(|(x, y)| Point { x: x, y: y })
+        .map(|(x, y)| Point { x, y })
         .collect();
 
     let area: Area = block_coord.into();
@@ -100,22 +93,20 @@ fn calculate_area_from_instructions(instructions: Vec<Instruction>) -> u64 {
     inside_area + b as u64
 }
 
-fn part_1(input: &str) -> u64 {
-    let instructions = part_1_decode_instructions(input);
-    calculate_area_from_instructions(instructions)
+#[derive(Clone)]
+struct Day18;
+const DAY: Day18 = Day18;
+impl Day<u64> for Day18 {
+    fn part_1(&self, input: &str) -> u64 {
+        let instructions = part_1_decode_instructions(input);
+        calculate_area_from_instructions(instructions)
+    }
+    fn part_2(&mut self, input: &str) -> u64 {
+        let instructions = part_2_decode_instructions(input);
+        calculate_area_from_instructions(instructions)
+    }
 }
 
-fn part_2(input: &str) -> u64 {
-    let instructions = part_2_decode_instructions(input);
-    calculate_area_from_instructions(instructions)
-}
-
-fn main() {
-    let input = include_str!("../input.txt");
-
-    let part_1_answer = part_1(input);
-    println!("part 1 answer: {}", part_1_answer);
-
-    let part_2_answer = part_2(input);
-    println!("part 2 answer: {}", part_2_answer);
+fn main() -> std::io::Result<()> {
+    DAY.clone().run(InputType::UserInput)
 }

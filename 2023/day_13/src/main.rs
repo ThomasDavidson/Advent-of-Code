@@ -1,3 +1,5 @@
+use library::input::{Day, InputType};
+
 #[derive(Debug, Clone, PartialEq)]
 struct Valley {
     land: Vec<Vec<char>>,
@@ -12,28 +14,28 @@ impl Valley {
                 .map(|x| {
                     self.land
                         .iter()
-                        .map(|row| row.iter().nth(x).unwrap().clone())
+                        .map(|row| *row.get(x).unwrap())
                         .collect::<Vec<char>>()
                 })
                 .collect(),
         }
     }
-}
-
-fn parse_input(input: &str) -> Vec<Valley> {
-    let lines: Vec<&str> = input.lines().collect();
-
-    let mut valleys: Vec<Valley> = Vec::new();
-
-    for valley in lines.split(|&a| a == "") {
-        valleys.push(Valley {
-            land: valley.iter().map(|&s| s.chars().collect()).collect(),
-        });
+    fn parse(input: &[&str]) -> Self {
+        Self {
+            land: input.iter().map(|s| s.chars().collect()).collect(),
+        }
     }
-    valleys
+}
+fn parse_input(input: &str) -> Vec<Valley> {
+    input
+        .lines()
+        .collect::<Vec<&str>>()
+        .split(|&a| a.is_empty())
+        .map(Valley::parse)
+        .collect()
 }
 
-fn row_diff(row_1: &Vec<char>, row_2: &Vec<char>) -> usize {
+fn row_diff(row_1: &[char], row_2: &[char]) -> usize {
     row_1
         .iter()
         .zip(row_2.iter())
@@ -90,45 +92,43 @@ fn find_reflection(valley: &Valley, smudges: usize) -> Option<usize> {
 
     None
 }
-fn part_1(valleys: Vec<Valley>) -> usize {
-    let mut answer = 0;
-    for (i, valley) in valleys.iter().enumerate() {
-        let res = match find_reflection(&valley, 0) {
-            Some(a) => a * 100,
-            None => match find_reflection(&valley.rotate(), 0) {
-                Some(a) => a,
-                None => panic!("No perfect mirror {}", i),
-            },
-        };
-        answer += res;
+struct Day13;
+const DAY: Day13 = Day13;
+impl Day<usize> for Day13 {
+    fn part_1(&self, input: &str) -> usize {
+        let valleys: Vec<Valley> = parse_input(input);
+
+        valleys
+            .iter()
+            .enumerate()
+            .map(|(i, valley)| match find_reflection(valley, 0) {
+                Some(a) => a * 100,
+                None => match find_reflection(&valley.rotate(), 0) {
+                    Some(a) => a,
+                    None => panic!("No perfect mirror {}", i),
+                },
+            })
+            .sum()
     }
-    answer
+    fn part_2(&self, input: &str) -> usize {
+        let valleys: Vec<Valley> = parse_input(input);
+
+        valleys
+            .iter()
+            .enumerate()
+            .map(|(i, valley)| match find_reflection(valley, 1) {
+                Some(a) => a * 100,
+                None => match find_reflection(&valley.rotate(), 1) {
+                    Some(a) => a,
+                    None => panic!("No perfect mirror {}", i),
+                },
+            })
+            .sum()
+    }
 }
 
-fn part_2(valleys: Vec<Valley>) -> usize {
-    let mut answer = 0;
-    for (i, valley) in valleys.iter().enumerate() {
-        let res = match find_reflection(&valley, 1) {
-            Some(a) => a * 100,
-            None => match find_reflection(&valley.rotate(), 1) {
-                Some(a) => a,
-                None => panic!("No perfect mirror {}", i),
-            },
-        };
-        answer += res;
-    }
-    answer
-}
-fn main() {
-    let input = include_str!("../input.txt");
-
-    let valleys: Vec<Valley> = parse_input(input);
-
-    let part_1_answer = part_1(valleys.clone());
-    println!("part 1 answer: {}", part_1_answer);
-
-    let part_2_answer = part_2(valleys.clone());
-    println!("part 2 answer: {}", part_2_answer);
+fn main() -> std::io::Result<()> {
+    DAY.run(InputType::UserInput)
 }
 
 #[cfg(test)]

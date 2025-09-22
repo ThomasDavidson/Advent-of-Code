@@ -1,17 +1,7 @@
 use itertools::Itertools;
 use library::grid::Vec3;
+use library::input::{Day, InputType};
 use nalgebra::{Matrix6, Matrix6x1, RowVector6};
-use std::{fs, time::Instant};
-
-const EXAMPLE: bool = false;
-const INPUT_FILE: &'static str = match EXAMPLE {
-    true => "./example.txt",
-    false => "./input.txt",
-};
-const XY_MIN_MAX: (f64, f64) = match EXAMPLE {
-    true => (7.0, 27.0),
-    false => (200000000000000.0, 400000000000000.0),
-};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct HailStone {
@@ -21,8 +11,8 @@ struct HailStone {
 impl HailStone {
     fn from_line(line: &str) -> Self {
         let (position_str, velocity_str) = line.split_once(" @ ").unwrap();
-        let position: Vec3<i128> = Vec3::from_str(position_str).unwrap();
-        let velocity: Vec3<i128> = Vec3::from_str(velocity_str).unwrap();
+        let position: Vec3<i128> = Vec3::parse(position_str).unwrap();
+        let velocity: Vec3<i128> = Vec3::parse(velocity_str).unwrap();
         Self { position, velocity }
     }
     fn get_equation(&self) -> (i128, i128, i128) {
@@ -66,109 +56,107 @@ struct HailStorm {
 }
 impl HailStorm {
     fn from_str(input: &str) -> Self {
-        let hail_stones: Vec<HailStone> = input
-            .lines()
-            .map(|line| HailStone::from_line(line))
-            .collect();
+        let hail_stones: Vec<HailStone> = input.lines().map(HailStone::from_line).collect();
 
         Self { hail_stones }
     }
 }
-fn part_1(input: &str, xy_range: (f64, f64)) -> u64 {
-    let storm = HailStorm::from_str(input);
 
-    let mut score = 0;
+#[derive(Clone)]
+struct Day24 {
+    range: (f64, f64),
+}
+const DAY: Day24 = Day24 {
+    range: (200000000000000.0, 400000000000000.0),
+};
+impl Day<u64> for Day24 {
+    fn part_1(&self, input: &str) -> u64 {
+        let storm = HailStorm::from_str(input);
 
-    let (xy_min, xy_max) = xy_range;
+        let mut score = 0;
 
-    for hail_stones in storm
-        .hail_stones
-        .iter()
-        .combinations(2)
-        .filter(|hs| hs[0] != hs[1])
-    {
-        let hail_stone = hail_stones[0];
-        let hail_stone2 = hail_stones[1];
+        let (xy_min, xy_max) = self.range;
 
-        let (x0, y0) = match hail_stone.check_intersection_xy(hail_stone2) {
-            None => continue,
-            Some(xy0) => xy0,
-        };
+        for hail_stones in storm
+            .hail_stones
+            .iter()
+            .combinations(2)
+            .filter(|hs| hs[0] != hs[1])
+        {
+            let hail_stone = hail_stones[0];
+            let hail_stone2 = hail_stones[1];
 
-        if !hail_stone.future_intersection_xy((x0, y0)) {
-            continue;
+            let (x0, y0) = match hail_stone.check_intersection_xy(hail_stone2) {
+                None => continue,
+                Some(xy0) => xy0,
+            };
+
+            if !hail_stone.future_intersection_xy((x0, y0)) {
+                continue;
+            }
+
+            if !hail_stone2.future_intersection_xy((x0, y0)) {
+                continue;
+            }
+
+            // check if intersection is within area
+            if (x0 < xy_min || x0 > xy_max) || (y0 < xy_min || y0 > xy_max) {
+                continue;
+            }
+            score += 1;
         }
-
-        if !hail_stone2.future_intersection_xy((x0, y0)) {
-            continue;
-        }
-
-        // check if intersection is within area
-        if (x0 < xy_min || x0 > xy_max) || (y0 < xy_min || y0 > xy_max) {
-            continue;
-        }
-        score += 1;
+        score
     }
-    score
+    // todo improve answer for any input
+    fn part_2(&mut self, input: &str) -> u64 {
+        let storm = HailStorm::from_str(input);
+
+        let p0: Vec3<f64> = storm.hail_stones[0].position.into();
+        let p1: Vec3<f64> = storm.hail_stones[1].position.into();
+        let p2: Vec3<f64> = storm.hail_stones[6].position.into();
+        let v0: Vec3<f64> = storm.hail_stones[0].velocity.into();
+        let v1: Vec3<f64> = storm.hail_stones[1].velocity.into();
+        let v2: Vec3<f64> = storm.hail_stones[6].velocity.into();
+
+        let b = Matrix6x1::from_row_slice(&[
+            ((p0.y as i128 * v0.x as i128 - p1.y as i128 * v1.x as i128)
+                - (p0.x as i128 * v0.y as i128 - p1.x as i128 * v1.y as i128)) as f64,
+            ((p0.y as i128 * v0.x as i128 - p2.y as i128 * v2.x as i128)
+                - (p0.x as i128 * v0.y as i128 - p2.x as i128 * v2.y as i128)) as f64,
+            ((p0.z as i128 * v0.x as i128 - p1.z as i128 * v1.x as i128)
+                - (p0.x as i128 * v0.z as i128 - p1.x as i128 * v1.z as i128)) as f64,
+            ((p0.z as i128 * v0.x as i128 - p2.z as i128 * v2.x as i128)
+                - (p0.x as i128 * v0.z as i128 - p2.x as i128 * v2.z as i128)) as f64,
+            ((p0.z as i128 * v0.y as i128 - p1.z as i128 * v1.y as i128)
+                - (p0.y as i128 * v0.z as i128 - p1.y as i128 * v1.z as i128)) as f64,
+            ((p0.z as i128 * v0.y as i128 - p2.z as i128 * v2.y as i128)
+                - (p0.y as i128 * v0.z as i128 - p2.y as i128 * v2.z as i128)) as f64,
+        ]);
+
+        let a = Matrix6::from_rows(&[
+            RowVector6::new(v1.y - v0.y, v0.x - v1.x, 0.0, p0.y - p1.y, p1.x - p0.x, 0.0),
+            RowVector6::new(v2.y - v0.y, v0.x - v2.x, 0.0, p0.y - p2.y, p2.x - p0.x, 0.0),
+            RowVector6::new(v1.z - v0.z, 0.0, v0.x - v1.x, p0.z - p1.z, 0.0, p1.x - p0.x),
+            RowVector6::new(v2.z - v0.z, 0.0, v0.x - v2.x, p0.z - p2.z, 0.0, p2.x - p0.x),
+            RowVector6::new(0.0, v1.z - v0.z, v0.y - v1.y, 0.0, p0.z - p1.z, p1.y - p0.y),
+            RowVector6::new(0.0, v2.z - v0.z, v0.y - v2.y, 0.0, p0.z - p2.z, p2.y - p0.y),
+        ]);
+
+        let r = a.lu().solve(&b).unwrap();
+        let answer: f64 = r[0] + r[1] + r[2];
+        answer.round() as u64
+    }
 }
 
-// todo improve answer for any input
-fn part_2(input: &str) -> i128 {
-    let storm = HailStorm::from_str(input);
-
-    let p0: Vec3<f64> = storm.hail_stones[0].position.clone().into();
-    let p1: Vec3<f64> = storm.hail_stones[1].position.clone().into();
-    let p2: Vec3<f64> = storm.hail_stones[6].position.clone().into();
-    let v0: Vec3<f64> = storm.hail_stones[0].velocity.clone().into();
-    let v1: Vec3<f64> = storm.hail_stones[1].velocity.clone().into();
-    let v2: Vec3<f64> = storm.hail_stones[6].velocity.clone().into();
-
-    let b = Matrix6x1::from_row_slice(&[
-        ((p0.y as i128 * v0.x as i128 - p1.y as i128 * v1.x as i128)
-            - (p0.x as i128 * v0.y as i128 - p1.x as i128 * v1.y as i128)) as f64,
-        ((p0.y as i128 * v0.x as i128 - p2.y as i128 * v2.x as i128)
-            - (p0.x as i128 * v0.y as i128 - p2.x as i128 * v2.y as i128)) as f64,
-        ((p0.z as i128 * v0.x as i128 - p1.z as i128 * v1.x as i128)
-            - (p0.x as i128 * v0.z as i128 - p1.x as i128 * v1.z as i128)) as f64,
-        ((p0.z as i128 * v0.x as i128 - p2.z as i128 * v2.x as i128)
-            - (p0.x as i128 * v0.z as i128 - p2.x as i128 * v2.z as i128)) as f64,
-        ((p0.z as i128 * v0.y as i128 - p1.z as i128 * v1.y as i128)
-            - (p0.y as i128 * v0.z as i128 - p1.y as i128 * v1.z as i128)) as f64,
-        ((p0.z as i128 * v0.y as i128 - p2.z as i128 * v2.y as i128)
-            - (p0.y as i128 * v0.z as i128 - p2.y as i128 * v2.z as i128)) as f64,
-    ]);
-
-    let a = Matrix6::from_rows(&[
-        RowVector6::new(v1.y - v0.y, v0.x - v1.x, 0.0, p0.y - p1.y, p1.x - p0.x, 0.0),
-        RowVector6::new(v2.y - v0.y, v0.x - v2.x, 0.0, p0.y - p2.y, p2.x - p0.x, 0.0),
-        RowVector6::new(v1.z - v0.z, 0.0, v0.x - v1.x, p0.z - p1.z, 0.0, p1.x - p0.x),
-        RowVector6::new(v2.z - v0.z, 0.0, v0.x - v2.x, p0.z - p2.z, 0.0, p2.x - p0.x),
-        RowVector6::new(0.0, v1.z - v0.z, v0.y - v1.y, 0.0, p0.z - p1.z, p1.y - p0.y),
-        RowVector6::new(0.0, v2.z - v0.z, v0.y - v2.y, 0.0, p0.z - p2.z, p2.y - p0.y),
-    ]);
-
-    let r = a.lu().solve(&b).unwrap();
-    let answer: f64 = r[0] + r[1] + r[2];
-    answer.round() as i128
-}
-
-fn main() {
-    let input = fs::read_to_string(INPUT_FILE).expect("Failed to read the file");
-
-    let start: Instant = Instant::now();
-    let part_1_answer = part_1(&input, XY_MIN_MAX);
-    let duration = start.elapsed();
-    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
-
-    let start: Instant = Instant::now();
-    let part_2_answer = part_2(&input);
-    let duration = start.elapsed();
-    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
+fn main() -> std::io::Result<()> {
+    DAY.clone().run(InputType::UserInput)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{part_1, part_2, HailStone};
+    use crate::{Day24, HailStone};
+    use library::input::Day;
+    const DAY: Day24 = Day24 { range: (7.0, 27.0) };
 
     #[test]
     fn test1() {
@@ -243,14 +231,14 @@ mod tests {
     #[test]
     fn test_part_1_example() {
         let input = include_str!("../example.txt");
-        let result = part_1(input, (7.0, 27.0));
+        let result = DAY.part_1(input);
 
         assert_eq!(result, 2);
     }
     #[test]
     fn test_part_2_example() {
         let input = include_str!("../example.txt");
-        let result = part_2(input);
+        let result = DAY.part_2(input);
 
         assert_eq!(result, 47);
     }

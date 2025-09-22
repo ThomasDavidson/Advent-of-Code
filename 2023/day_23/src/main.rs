@@ -1,7 +1,8 @@
 use colored::Colorize;
 use core::{fmt, str};
 use library::grid::{Coord, Direction};
-use std::{collections::HashMap, fmt::Formatter, time::Instant};
+use library::input::{Day, InputType};
+use std::{collections::HashMap, fmt::Formatter};
 
 #[derive(PartialEq)]
 enum Tile {
@@ -42,7 +43,7 @@ impl Tile {
 }
 
 impl fmt::Display for Tile {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_char())
     }
 }
@@ -54,7 +55,7 @@ impl Forest {
     fn from_str(input: &str) -> Self {
         let grid = input
             .lines()
-            .map(|l| l.chars().map(|c| Tile::from_char(c)).collect())
+            .map(|l| l.chars().map(Tile::from_char).collect())
             .collect();
 
         Self { grid }
@@ -62,7 +63,7 @@ impl Forest {
     fn get_start(&self) -> Coord {
         for (x, t) in self.grid[0].iter().enumerate() {
             if *t == Tile::Path {
-                return Coord::new(x as usize, 0);
+                return Coord::new(x, 0);
             }
         }
         panic!("Start cannot be found");
@@ -73,7 +74,7 @@ impl Forest {
     fn adjacent_tiles(&self, coords: &Coord, part_1: bool) -> Vec<Coord> {
         let width = self.grid[0].len();
         let height = self.grid.len();
-        let tile = self.get_tile(&coords);
+        let tile = self.get_tile(coords);
 
         if part_1 {
             tile.to_directions()
@@ -99,7 +100,7 @@ impl Forest {
                 continue;
                 // don't continue after finding node
             }
-            let mut next = hiker.hike(&self, false);
+            let mut next = hiker.hike(self, false);
 
             if next.len() >= 2 && *coords != hiker.coords {
                 let node = (hiker.coords, hiker.score);
@@ -158,16 +159,15 @@ impl NodeMap {
         // todo filter previous nodes
         next_nodes
             .iter()
-            .filter(|(next_node, _weight)| !hiker.previously_visited(&next_node))
+            .filter(|(next_node, _weight)| !hiker.previously_visited(next_node))
             .map(|(next_node, weight)| {
                 let mut new_previous = hiker.previous.clone();
-                new_previous.push(next_node.clone());
+                new_previous.push(*next_node);
 
                 Hiker {
                     coords: *next_node,
                     previous: new_previous,
                     score: hiker.score + weight,
-                    ..hiker.clone()
                 }
             })
             .collect()
@@ -201,21 +201,18 @@ impl Hiker {
             .filter(|coords| !self.previously_visited(coords))
             .map(|coords| {
                 let mut new_previous = self.previous.clone();
-                new_previous.push(coords.clone());
+                new_previous.push(*coords);
 
-                let hiker = Self {
+                Self {
                     coords: *coords,
                     previous: new_previous,
                     score: self.score + 1,
-                    ..self.clone()
-                };
-
-                hiker
+                }
             })
             .collect()
     }
 
-    fn print_path(&self, forest: &Forest) {
+    fn _print_path(&self, forest: &Forest) {
         for (y, line) in forest.grid.iter().enumerate() {
             for (x, t) in line.iter().enumerate() {
                 let coord = Coord { x, y };
@@ -232,68 +229,60 @@ impl Hiker {
     }
 }
 
-fn part_1(input: &str) -> usize {
-    let forest = Forest::from_str(input);
-    let height = forest.grid.len();
-    let start = forest.get_start();
+#[derive(Clone)]
+struct Day23;
+const DAY: Day23 = Day23;
+impl Day<usize> for Day23 {
+    fn part_1(&self, input: &str) -> usize {
+        let forest = Forest::from_str(input);
+        let height = forest.grid.len();
+        let start = forest.get_start();
 
-    let initlal = Hiker::new(start);
+        let initial = Hiker::new(start);
 
-    let mut hikers: Vec<Hiker> = vec![initlal];
+        let mut hikers: Vec<Hiker> = vec![initial];
 
-    let mut longest_hike_len: usize = 0;
-    let mut longest_hike: Option<Hiker> = None;
+        let mut longest_hike_len: usize = 0;
+        let mut longest_hike: Option<Hiker> = None;
 
-    while let Some(hiker) = hikers.pop() {
-        if hiker.coords.y + 1 == height {
-            if longest_hike_len < hiker.score {
+        while let Some(hiker) = hikers.pop() {
+            if hiker.coords.y + 1 == height && longest_hike_len < hiker.score {
                 longest_hike_len = hiker.score;
                 longest_hike = Some(hiker.clone());
             }
+            let mut next = hiker.hike(&forest, true);
+            hikers.append(&mut next);
         }
-        let mut next = hiker.hike(&forest, true);
-        hikers.append(&mut next);
+
+        longest_hike.unwrap().score
     }
+    fn part_2(&mut self, input: &str) -> usize {
+        let forest = Forest::from_str(input);
+        let node_map = NodeMap::from_forest(&forest);
 
-    longest_hike.unwrap().score
-}
-fn part_2(input: &str) -> usize {
-    let forest = Forest::from_str(input);
-    let node_map = NodeMap::from_forest(&forest);
+        let height = forest.grid.len();
+        let start = forest.get_start();
 
-    let height = forest.grid.len();
-    let start = forest.get_start();
+        let initial = Hiker::new(start);
 
-    let initlal = Hiker::new(start);
+        let mut hikers: Vec<Hiker> = vec![initial];
 
-    let mut hikers: Vec<Hiker> = vec![initlal];
+        let mut longest_hike_len: usize = 0;
+        let mut longest_hike: Option<Hiker> = None;
 
-    let mut longest_hike_len: usize = 0;
-    let mut longest_hike: Option<Hiker> = None;
-
-    while let Some(hiker) = hikers.pop() {
-        if hiker.coords.y + 1 == height {
-            if longest_hike_len < hiker.score {
+        while let Some(hiker) = hikers.pop() {
+            if hiker.coords.y + 1 == height && longest_hike_len < hiker.score {
                 longest_hike_len = hiker.score;
                 longest_hike = Some(hiker.clone());
             }
+            let mut next = node_map.traverse_node(&hiker);
+            hikers.append(&mut next);
         }
-        let mut next = node_map.traverse_node(&hiker);
-        hikers.append(&mut next);
-    }
 
-    longest_hike.unwrap().score
+        longest_hike.unwrap().score
+    }
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
-    let start: Instant = Instant::now();
-    let part_1_answer = part_1(&input);
-    let duration = start.elapsed();
-    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
-
-    let start: Instant = Instant::now();
-    let part_2_answer = part_2(&input);
-    let duration = start.elapsed();
-    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
+fn main() -> std::io::Result<()> {
+    DAY.clone().run(InputType::UserInput)
 }

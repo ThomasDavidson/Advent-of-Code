@@ -1,11 +1,11 @@
 use crate::Tile::{GardenPlot, Rocks, Start};
 use colored::Colorize;
 use library::grid::{Direction, Vec2};
+use library::input::{Day, InputType};
 use library::math::{round_to, sawtooth};
 use std::{
     collections::{HashMap, VecDeque},
     fmt,
-    time::Instant,
 };
 
 #[derive(Debug, Eq, PartialEq)]
@@ -51,7 +51,7 @@ impl Garden {
     fn from_string(input: &str) -> Self {
         let grid: Vec<Vec<Tile>> = input
             .lines()
-            .map(|line| line.chars().map(|c| Tile::from_char(c)).collect())
+            .map(|line| line.chars().map(Tile::from_char).collect())
             .collect();
 
         Self {
@@ -122,7 +122,7 @@ impl Garden {
 
         entries.map(|x| x.1)
     }
-    fn print_steps_range(&self, y_max: i64, y_min: i64, x_max: i64, x_min: i64) {
+    fn _print_steps_range(&self, y_max: i64, y_min: i64, x_max: i64, x_min: i64) {
         let entries: Vec<(Vec2<i64>, u32)> = self
             .steps
             .clone()
@@ -155,8 +155,7 @@ impl Garden {
                 (min_y_step..max_y_step)
                     .step_by(height)
                     .map(|y| {
-                        let steps =
-                            self.get_steps_range(y + height as i64, y as i64, x + width as i64, x);
+                        let steps = self.get_steps_range(y + height as i64, y, x + width as i64, x);
                         self.calculate_score_from_iter(steps, max_steps)
                     })
                     .collect()
@@ -180,7 +179,7 @@ impl Garden {
                 false => 0,
             }
         })
-        .fold(0, |acc, x| acc + x)
+        .sum()
     }
 
     fn calculate_score(&self, max_steps: u32) -> u64 {
@@ -194,7 +193,7 @@ impl Garden {
                     false => 0,
                 }
             })
-            .fold(0, |acc, x| acc + x)
+            .sum()
     }
 
     fn get_color(&self, x: i64, y: i64) -> u8 {
@@ -265,19 +264,19 @@ impl fmt::Display for Garden {
 
                 let s = if let Some(steps) = self.steps.get(&elf.coords) {
                     if steps % 2 == 0 {
-                        format!("E")
+                        "E".to_string()
                     } else {
-                        format!("O")
+                        "O".to_string()
                     }
                 } else {
                     format!("{}", tile)
                 };
 
                 let cs = match self.get_color(x, y) {
-                    0 => format!("{}", s).red(),
-                    1 => format!("{}", s).blue(),
-                    2 => format!("{}", s).magenta(),
-                    3 => format!("{}", s).green(),
+                    0 => s.to_string().red(),
+                    1 => s.to_string().blue(),
+                    2 => s.to_string().magenta(),
+                    3 => s.to_string().green(),
                     _ => panic!(),
                 };
 
@@ -296,207 +295,263 @@ struct Elf {
     coords: Vec2<i64>,
 }
 
-fn part_1(input: &str, max_steps: u32) -> u64 {
-    let mut garden = Garden::from_string(input);
+#[derive(Clone)]
+struct Day21 {
+    part_1_steps: u32,
+    part_2_steps: u32,
+}
+const DAY: Day21 = Day21 {
+    part_1_steps: 64,
+    part_2_steps: 26501365,
+};
+impl Day<u64> for Day21 {
+    fn part_1(&self, input: &str) -> u64 {
+        let max_steps: u32 = self.part_1_steps;
+        let mut garden = Garden::from_string(input);
 
-    let gardener = Elf {
-        max_steps,
-        steps: 0,
-        coords: garden.find_start(),
-    };
+        let gardener = Elf {
+            max_steps,
+            steps: 0,
+            coords: garden.find_start(),
+        };
 
-    let mut gardeners = VecDeque::from([gardener]);
+        let mut gardeners = VecDeque::from([gardener]);
 
-    while let Some(gardener) = gardeners.pop_front() {
-        if garden.visited(&gardener) {
-            continue;
+        while let Some(gardener) = gardeners.pop_front() {
+            if garden.visited(&gardener) {
+                continue;
+            }
+
+            garden.visit(&gardener);
+            let mut next = garden.find_next(gardener);
+            gardeners.append(&mut next);
+        }
+        garden.calculate_score(max_steps)
+    }
+    fn part_2(&mut self, input: &str) -> u64 {
+        let mut garden = Garden::from_string(input);
+
+        let width = garden.width() as i64;
+        let height = garden.height() as i64;
+        if width != height {
+            panic!("Not sqare");
         }
 
-        garden.visit(&gardener);
-        let mut next = garden.find_next(gardener);
-        gardeners.append(&mut next);
-    }
-    garden.calculate_score(max_steps)
-}
+        let reduced_max_steps = if self.part_2_steps > width as u32 * 4 {
+            (self.part_2_steps as i64 % width + width * 2) as u32
+        } else {
+            println!("Using part 1 method due to size");
+            self.part_1_steps = self.part_2_steps;
+            return self.part_1(input);
+        };
 
-fn part_2(input: &str, max_steps: u32) -> u64 {
-    let mut garden = Garden::from_string(input);
+        let gardener = Elf {
+            max_steps: reduced_max_steps,
+            steps: 0,
+            coords: garden.find_start(),
+        };
 
-    let width = garden.width() as i64;
-    let height = garden.height() as i64;
-    if width != height {
-        panic!("Not sqare");
-    }
+        let mut gardeners = VecDeque::from([gardener]);
 
-    let reduced_max_steps = if max_steps > width as u32 * 4 {
-        (max_steps as i64 % width + width * 2) as u32
-    } else {
-        println!("Using part 1 method due to size");
-        return part_1(input, max_steps);
-    };
+        while let Some(gardener) = gardeners.pop_front() {
+            if garden.visited(&gardener) {
+                continue;
+            }
 
-    let gardener = Elf {
-        max_steps: reduced_max_steps,
-        steps: 0,
-        coords: garden.find_start(),
-    };
-
-    let mut gardeners = VecDeque::from([gardener]);
-
-    while let Some(gardener) = gardeners.pop_front() {
-        if garden.visited(&gardener) {
-            continue;
+            garden.visit(&gardener);
+            let mut next = garden.find_next(gardener);
+            gardeners.append(&mut next);
         }
 
-        garden.visit(&gardener);
-        let mut next = garden.find_next(gardener);
-        gardeners.append(&mut next);
+        let scores = garden.calculate_score_for_each_universe(self.part_2_steps);
+
+        let origin = if scores.len() == 5 { 2 } else { 3 };
+
+        let e1 = scores[origin][origin];
+        let e2 = scores[origin - 1][origin];
+
+        let a1 = scores[origin - 1][origin - 1];
+        let a2 = scores[origin - 1][origin + 1];
+        let a3 = scores[origin + 1][origin + 1];
+        let a4 = scores[origin + 1][origin - 1];
+        let a = a1 + a2 + a3 + a4;
+
+        let t1 = scores[origin - 2][origin];
+        let t2 = scores[origin][origin - 2];
+        let t3 = scores[origin + 2][origin];
+        let t4 = scores[origin][origin + 2];
+
+        // set 0 if d doesn't exist
+        let (d1, d2) = if scores.len() == 5 {
+            (0, 0)
+        } else {
+            let d1: u64 = scores[origin - 3][origin];
+            let d2 = scores[origin][origin - 3];
+            (d1, d2)
+        };
+
+        let (d3, d4) = if origin + 3 > scores.len() {
+            let d3 = scores[origin + 3][origin];
+            let d4 = scores[origin][origin + 3];
+            (d3, d4)
+        } else {
+            (0, 0)
+        };
+
+        let d = d1 + d2 + d3 + d4;
+
+        let t = t1 + t2 + t3 + t4;
+
+        let b1 = scores[origin - 1][origin - 2];
+        let b2 = scores[origin - 2][origin + 1];
+        let b3 = scores[origin + 1][origin - 2];
+        let b4 = scores[origin + 1][origin + 2];
+        let b = b1 + b2 + b3 + b4;
+
+        let s = (width - 1) / 2;
+        let n = ((self.part_2_steps as i64 - s) / width) as u64;
+
+        (n - 1).pow(2) * e1 + n.pow(2) * e2 + (n - 1) * a + n * b + t + d
     }
-
-    let scores = garden.calculate_score_for_each_universe(max_steps);
-
-    let origin = if scores.len() == 5 { 2 } else { 3 };
-
-    let e1 = scores[origin][origin];
-    let e2 = scores[origin - 1][origin];
-
-    let a1 = scores[origin - 1][origin - 1];
-    let a2 = scores[origin - 1][origin + 1];
-    let a3 = scores[origin + 1][origin + 1];
-    let a4 = scores[origin + 1][origin - 1];
-    let a = a1 + a2 + a3 + a4;
-
-    let t1 = scores[origin - 2][origin];
-    let t2 = scores[origin][origin - 2];
-    let t3 = scores[origin + 2][origin];
-    let t4 = scores[origin][origin + 2];
-
-    // set 0 if d doesn't exist
-    let (d1, d2) = if scores.len() == 5 {
-        (0, 0)
-    } else {
-        let d1: u64 = scores[origin - 3][origin];
-        let d2 = scores[origin][origin - 3];
-        (d1, d2)
-    };
-
-    let (d3, d4) = if origin + 3 > scores.len() {
-        let d3 = scores[origin + 3][origin];
-        let d4 = scores[origin][origin + 3];
-        (d3, d4)
-    } else {
-        (0, 0)
-    };
-
-    let d = d1 + d2 + d3 + d4;
-
-    let t = t1 + t2 + t3 + t4;
-
-    let b1 = scores[origin - 1][origin - 2];
-    let b2 = scores[origin - 2][origin + 1];
-    let b3 = scores[origin + 1][origin - 2];
-    let b4 = scores[origin + 1][origin + 2];
-    let b = b1 + b2 + b3 + b4;
-
-    let s = (width - 1) / 2;
-    let n = ((max_steps as i64 - s) / width) as u64;
-
-    (n - 1).pow(2) * e1 + n.pow(2) * e2 + (n - 1) * a + n * b + t + d
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
-
-    let start: Instant = Instant::now();
-    let part_1_answer = part_1(&input, 64);
-    let duration = start.elapsed();
-    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
-
-    let start: Instant = Instant::now();
-    let part_2_answer = part_2(&input, 26501365);
-    let duration = start.elapsed();
-    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
+fn main() -> std::io::Result<()> {
+    DAY.clone().run(InputType::UserInput)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{part_1, part_2};
+    use crate::Day21;
+    use library::input::Day;
+
     #[test]
     fn test1() {
         let input = include_str!("../example.txt");
-        let result = part_1(input, 6);
+        let day = Day21 {
+            part_1_steps: 6,
+            part_2_steps: 0,
+        };
+        let result = day.part_1(input);
         assert_eq!(result, 16);
     }
     #[test]
     fn test2() {
         let input = include_str!("../example.txt");
-        let result = part_1(input, 10);
+        let day = Day21 {
+            part_1_steps: 10,
+            part_2_steps: 0,
+        };
+        let result = day.part_1(input);
         assert_eq!(result, 50);
     }
     #[test]
     fn test3() {
         let input = include_str!("../example.txt");
-        let result = part_1(input, 50);
+        let day = Day21 {
+            part_1_steps: 50,
+            part_2_steps: 0,
+        };
+        let result = day.part_1(input);
         assert_eq!(result, 1594);
     }
     #[test]
     fn test4() {
         let input = include_str!("../example.txt");
-        let result = part_1(input, 100);
+        let day = Day21 {
+            part_1_steps: 100,
+            part_2_steps: 0,
+        };
+        let result = day.part_1(input);
         assert_eq!(result, 6536);
     }
     #[test]
     fn test5() {
         let input = include_str!("../example.txt");
-        let result = part_1(input, 500);
+        let day = Day21 {
+            part_1_steps: 500,
+            part_2_steps: 0,
+        };
+        let result = day.part_1(input);
         assert_eq!(result, 167004);
     }
     #[test]
     fn test6() {
         let input = include_str!("../example.txt");
-        let result = part_1(input, 1000);
+        let day = Day21 {
+            part_1_steps: 1000,
+            part_2_steps: 0,
+        };
+        let result = day.part_1(input);
         assert_eq!(result, 668697);
     }
     #[test]
     fn test2_1() {
         let input = include_str!("../example2.txt");
-        let result = part_2(input, 7);
+        let mut day = Day21 {
+            part_1_steps: 0,
+            part_2_steps: 7,
+        };
+        let result = day.part_2(input);
         assert_eq!(result, 52);
     }
     #[test]
     fn test2_2() {
         let input = include_str!("../example2.txt");
-        let result = part_2(input, 8);
+        let mut day = Day21 {
+            part_1_steps: 0,
+            part_2_steps: 8,
+        };
+        let result = day.part_2(input);
         assert_eq!(result, 68);
     }
     #[test]
     fn test2_3() {
         let input = include_str!("../example2.txt");
-        let result = part_2(input, 25);
+        let mut day = Day21 {
+            part_1_steps: 0,
+            part_2_steps: 25,
+        };
+        let result = day.part_2(input);
         assert_eq!(result, 576);
     }
     #[test]
     fn test2_4() {
         let input = include_str!("../example2.txt");
-        let result = part_2(input, 42);
+        let mut day = Day21 {
+            part_1_steps: 0,
+            part_2_steps: 42,
+        };
+        let result = day.part_2(input);
         assert_eq!(result, 1576);
     }
     #[test]
     fn test2_5() {
         let input = include_str!("../example2.txt");
-        let result = part_2(input, 59);
+        let mut day = Day21 {
+            part_1_steps: 0,
+            part_2_steps: 59,
+        };
+        let result = day.part_2(input);
         assert_eq!(result, 3068);
     }
     #[test]
     fn test2_6() {
         let input = include_str!("../example2.txt");
-        let result = part_2(input, 76);
+        let mut day = Day21 {
+            part_1_steps: 0,
+            part_2_steps: 76,
+        };
+        let result = day.part_2(input);
         assert_eq!(result, 5052);
     }
     #[test]
     fn test2_7() {
         let input = include_str!("../example2.txt");
-        let result = part_2(input, 1180148);
+        let mut day = Day21 {
+            part_1_steps: 0,
+            part_2_steps: 1180148,
+        };
+        let result = day.part_2(input);
         assert_eq!(result, 1185525742508);
     }
 }

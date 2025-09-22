@@ -1,6 +1,6 @@
+use library::input::{Day, InputType};
 use roots::find_roots_quadratic;
 use roots::Roots;
-use std::iter::zip;
 
 #[derive(Debug)]
 struct Race {
@@ -14,8 +14,6 @@ fn calculate_time_margin(race: &Race) -> i64 {
     let c: f64 = -race.distance as f64;
     let root: Roots<f64> = find_roots_quadratic(a, b, c);
 
-    println!("{:?}", root);
-
     let roots: [f64; 2] = match root {
         Roots::Two([x1, x2]) => [x1, x2],
         _ => panic!("Should not be none"),
@@ -24,80 +22,94 @@ fn calculate_time_margin(race: &Race) -> i64 {
     let min_iter = roots[0].ceil() as i64;
     let max_iter = roots[1].floor() as i64;
 
-    println!("Win max: {} min: {}", max_iter, min_iter);
-
-    let diff = max_iter - min_iter + 1;
-
-    // for i in min_iter..max_iter {
-    //     if (i as f64) > roots[0] && (i as f64) < roots[1] {
-    //         ret = ret + 1;
-    //     }
-    // }
-
-    return diff;
+    max_iter - min_iter + 1
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
+#[derive(Debug)]
+enum Races {
+    Part1(Vec<Race>),
+    Part2(Race),
+}
+impl Races {
+    fn parse_part_1(input: &str) -> Self {
+        let mut lines = input.lines();
 
-    println!("{}", input);
+        let times: Vec<i64> = lines
+            .next()
+            .unwrap()
+            .split_whitespace()
+            .filter_map(|x| x.parse().ok())
+            .collect();
 
-    let mut times: Vec<i64> = vec![];
-    let mut distances: Vec<i64> = vec![];
+        let distances: Vec<i64> = lines
+            .next()
+            .unwrap()
+            .split_whitespace()
+            .filter_map(|x| x.parse().ok())
+            .collect();
 
-    let mut day_1_races: Vec<Race> = vec![];
+        let races = distances
+            .into_iter()
+            .zip(times)
+            .map(|(distance, time)| Race { distance, time })
+            .collect();
 
-    for (i, line) in input.lines().enumerate() {
-        for day_1_races in line.split_whitespace() {
-            let val = day_1_races.parse::<i64>();
-
-            match val {
-                Err(_e) => (),
-
-                Ok(num) => {
-                    if i == 0 {
-                        times.push(num);
-                    } else {
-                        distances.push(num);
-                    }
-                }
-            };
-        }
+        Self::Part1(races)
     }
 
-    for (time, distance) in zip(times.iter(), distances.iter()) {
-        let race = Race {
-            distance: distance.clone(),
-            time: time.clone(),
+    fn parse_part_2(input: &str) -> Self {
+        let mut lines = input.lines();
+
+        let time = lines
+            .next()
+            .unwrap()
+            .chars()
+            .filter(|arg0: &char| char::is_numeric(*arg0))
+            .collect::<String>()
+            .parse()
+            .unwrap();
+
+        let distance = lines
+            .next()
+            .unwrap()
+            .chars()
+            .filter(|arg0: &char| char::is_numeric(*arg0))
+            .collect::<String>()
+            .parse()
+            .unwrap();
+
+        Self::Part2(Race { time, distance })
+    }
+}
+
+struct Day6;
+const DAY: Day6 = Day6;
+impl Day<i64> for Day6 {
+    fn part_1(&self, input: &str) -> i64 {
+        let Races::Part1(races) = Races::parse_part_1(input) else {
+            panic!()
         };
-        day_1_races.push(race);
+
+        let mut part_1_answer: i64 = 1;
+
+        for race in &races {
+            let margin: i64 = calculate_time_margin(race);
+            part_1_answer *= margin;
+        }
+
+        part_1_answer
     }
+    fn part_2(&self, input: &str) -> i64 {
+        let Races::Part2(race) = Races::parse_part_2(input) else {
+            panic!()
+        };
 
-    let mut day_1_answer: i64 = 1;
-
-    for race in &day_1_races {
-        let margin: i64 = calculate_time_margin(&race);
-        // println!("distance: {} time: {} margin: {}", race.distance, race.time, margin);
-
-        day_1_answer = day_1_answer * margin;
+        calculate_time_margin(&race)
     }
-    println!("day_1_answer: {}", day_1_answer);
+}
 
-    let mut day_2_time_str: String = Default::default();
-    let mut day_2_distance_str: String = Default::default();
-    for race in &day_1_races {
-        day_2_time_str.push_str(&race.time.to_string());
-        day_2_distance_str.push_str(&race.distance.to_string());
-    }
-
-    let day_2_race = Race {
-        time: day_2_time_str.parse::<i64>().unwrap(),
-        distance: day_2_distance_str.parse::<i64>().unwrap(),
-    };
-    println!("{:?}", day_2_race);
-
-    let day_2_answer: i64 = calculate_time_margin(&day_2_race);
-    println!("Day 2 margin: {}", day_2_answer);
+fn main() -> std::io::Result<()> {
+    DAY.run(InputType::UserInput)
 }
 
 #[cfg(test)]

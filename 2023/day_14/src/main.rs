@@ -1,13 +1,14 @@
 use std::{collections::VecDeque, ops::Rem, time::Instant};
+use library::input::Day;
 
-fn calculate_weight(lines: &Vec<Vec<char>>) -> usize {
+fn calculate_weight(lines: &[Vec<char>]) -> usize {
     let res = lines
         .iter()
         .rev()
         .enumerate()
         .map(|(i, line)| line.iter().filter(|&&c| c == 'O').count() * (i + 1));
 
-    res.fold(0, |acc, i| acc + i)
+    res.sum()
 }
 
 #[derive(Debug)]
@@ -131,9 +132,32 @@ fn part_2(input: &str) -> usize {
 
     let remainder = remaining_cycles.rem(records.iter().len());
 
-    let final_rotation = &records.iter().nth(remainder).unwrap().1;
+    let final_rotation = &records.get(remainder).unwrap().1;
 
     calculate_weight(final_rotation)
+}
+
+struct Day14;
+const DAY: Day14 = Day14;
+impl Day<usize> for Day14 {
+    fn part_1(&self, input: &str) -> usize {
+        let space = Space::parse(input);
+        let galaxies = space.calculate_expanded_galaxies(2);
+
+        galaxies
+            .iter()
+            .combinations(2)
+            .fold(0, |acc, comb| acc + comb[0].distance(comb[1]))
+    }
+    fn part_2(&self, input: &str) -> usize {
+        let space = Space::parse(input);
+        let galaxies: Vec<Coords> = space.calculate_expanded_galaxies(1000000);
+
+        galaxies
+            .iter()
+            .combinations(2)
+            .fold(0, |acc, comb| acc + comb[0].distance(comb[1]))
+    }
 }
 
 fn main() {

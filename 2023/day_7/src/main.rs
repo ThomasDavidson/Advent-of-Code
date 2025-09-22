@@ -1,3 +1,4 @@
+use library::input::{Day, InputType};
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -24,96 +25,115 @@ struct Hand {
     card_stat: [CardStat; 5], // card count descending ex. 22100
     kind: HandType,
 }
+impl Hand {
+    fn parse(hand_line: &str) -> Hand {
+        let mut hand = Hand {
+            bid: 0,
+            hand_array: ['0'; 5],
+            card_stat: [CardStat {
+                count: 0,
+                face: '0',
+            }; 5],
+            kind: HandType::HighCard,
+        };
 
-fn hand_text_to_hand_struct(hand_line: &str) -> Hand {
-    let mut hand = Hand {
-        bid: 0,
-        hand_array: ['0'; 5],
-        card_stat: [CardStat {
-            count: 0,
-            face: '0',
-        }; 5],
-        kind: HandType::HighCard,
-    };
+        let mut cards_count: [u8; 5] = [0; 5];
 
-    let mut cards_count: [u8; 5] = [0; 5];
+        let split_hand_vec: Vec<&str> = hand_line.split(' ').collect();
 
-    let split_hand_vec: Vec<&str> = hand_line.split(' ').collect();
+        if split_hand_vec.len() != 2 {
+            panic!("Hand should only split in 2");
+        }
+        let split_hand_array: [&str; 2] = split_hand_vec.try_into().unwrap();
 
-    if split_hand_vec.len() != 2 {
-        panic!("Hand should only split in 2");
-    }
-    let split_hand_array: [&str; 2] = split_hand_vec.try_into().unwrap();
+        // bid amount
+        hand.bid = match &split_hand_array[1].parse::<u64>() {
+            Ok(bid) => *bid,
+            Err(err) => panic!("{:?}", err),
+        };
 
-    // bid amount
-    hand.bid = match &split_hand_array[1].parse::<u64>() {
-        Ok(bid) => *bid,
-        Err(err) => panic!("{:?}", err),
-    };
+        // hand char array
+        let hand_vec: Vec<char> = split_hand_array[0].chars().collect();
+        hand.hand_array = hand_vec.clone().try_into().unwrap();
 
-    // hand char array
-    let hand_vec: Vec<char> = split_hand_array[0].chars().collect();
-    hand.hand_array = hand_vec.clone().try_into().unwrap();
-
-    // card count
-    let mut unique_cards = hand_vec.clone();
-    unique_cards.sort();
-    // println!("{:?}", unique_cards);
-    unique_cards.dedup();
-    // println!("{:?}", unique_cards);
-    for c in unique_cards {
-        // print!("{} ", c);
-        let card_count: usize = hand_vec.iter().filter(|&a| *a == c).count();
-        // println!("{} {}", c, card_count);
-        for i in &mut cards_count {
-            if *i == 0 {
-                *i = card_count as u8;
-                break;
+        // card count
+        let mut unique_cards = hand_vec.clone();
+        unique_cards.sort();
+        // println!("{:?}", unique_cards);
+        unique_cards.dedup();
+        // println!("{:?}", unique_cards);
+        for c in unique_cards {
+            // print!("{} ", c);
+            let card_count: usize = hand_vec.iter().filter(|&a| *a == c).count();
+            // println!("{} {}", c, card_count);
+            for i in &mut cards_count {
+                if *i == 0 {
+                    *i = card_count as u8;
+                    break;
+                }
+            }
+            for i in &mut hand.card_stat {
+                if i.count == 0 {
+                    i.count = card_count as u8;
+                    i.face = c;
+                    break;
+                }
             }
         }
-        for i in &mut hand.card_stat {
-            if i.count == 0 {
-                i.count = card_count as u8;
-                i.face = c;
-                break;
-            }
-        }
-    }
-    cards_count.sort_by(|a, b| b.cmp(a));
-    hand.card_stat.sort_by(|a, b| b.count.cmp(&a.count));
+        cards_count.sort_by(|a, b| b.cmp(a));
+        hand.card_stat.sort_by(|a, b| b.count.cmp(&a.count));
 
-    // hand kind
-    hand.kind = match cards_count {
-        [5, ..] => HandType::FiveOfaKind,
-        [4, ..] => HandType::FourOfaKind,
-        [3, 2, ..] => HandType::FullHouse,
-        [3, ..] => HandType::ThreeOfaKind,
-        [2, 2, ..] => HandType::TwoPair,
-        [2, ..] => HandType::OnePair,
-        [1, 1, 1, 1, 1] => HandType::HighCard,
-        _ => panic!("Above condition should match all"),
-    };
-    hand
+        // hand kind
+        hand.kind = match cards_count {
+            [5, ..] => HandType::FiveOfaKind,
+            [4, ..] => HandType::FourOfaKind,
+            [3, 2, ..] => HandType::FullHouse,
+            [3, ..] => HandType::ThreeOfaKind,
+            [2, 2, ..] => HandType::TwoPair,
+            [2, ..] => HandType::OnePair,
+            [1, 1, 1, 1, 1] => HandType::HighCard,
+            _ => panic!("Above condition should match all"),
+        };
+        hand
+    }
+
+    fn card_strength() -> HashMap<char, i32> {
+        HashMap::from([
+            ('2', 2),
+            ('3', 3),
+            ('4', 4),
+            ('5', 5),
+            ('6', 6),
+            ('7', 7),
+            ('8', 8),
+            ('9', 9),
+            ('T', 10),
+            ('J', 11),
+            ('Q', 12),
+            ('K', 13),
+            ('A', 14),
+        ])
+    }
 }
 
 fn maximize_card_score_with_joker(hand: &Hand) -> HandType {
     let joker_num = hand.hand_array.iter().filter(|&a| *a == 'J').count();
-    let mut hightest_non_joker: u8 = 0;
-    let mut second_hightest_non_joker: u8 = 0;
+    let mut highest_non_joker: u8 = 0;
+    let mut second_highest_non_joker: u8 = 0;
 
     for i in 0..3 {
         if hand.card_stat[i].face == 'J' {
             continue;
         }
-        if hightest_non_joker == 0 {
-            hightest_non_joker = hand.card_stat[i].count;
-        } else if second_hightest_non_joker == 0 {
-            second_hightest_non_joker = hand.card_stat[i].count;
+        if highest_non_joker == 0 {
+            highest_non_joker = hand.card_stat[i].count;
+        } else if second_highest_non_joker == 0 {
+            second_highest_non_joker = hand.card_stat[i].count;
         }
     }
 
     // joker, highest non joker, second highest non joker
-    let match_tuple = (joker_num, hightest_non_joker, second_hightest_non_joker);
+    let match_tuple = (joker_num, highest_non_joker, second_highest_non_joker);
 
     match match_tuple {
         (0, ..) => hand.kind,
@@ -133,7 +153,7 @@ fn maximize_card_score_with_joker(hand: &Hand) -> HandType {
     }
 }
 
-fn calculate_answer(hands: &mut Vec<Hand>, card_order: &HashMap<char, i32>) -> u64 {
+fn calculate_answer(hands: &mut [Hand], card_order: &HashMap<char, i32>) -> u64 {
     // reverse sort to easily calculate score
     hands.sort_by(|a, b| {
         let mut sort = b.kind.cmp(&a.kind);
@@ -154,45 +174,33 @@ fn calculate_answer(hands: &mut Vec<Hand>, card_order: &HashMap<char, i32>) -> u
     score
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
+struct Day7;
+const DAY: Day7 = Day7;
+impl Day<u64> for Day7 {
+    fn part_1(&self, input: &str) -> u64 {
+        let part_1_card_cmp = Hand::card_strength();
 
-    let day_1_card_cmp = HashMap::from([
-        ('2', 2),
-        ('3', 3),
-        ('4', 4),
-        ('5', 5),
-        ('6', 6),
-        ('7', 7),
-        ('8', 8),
-        ('9', 9),
-        ('T', 10),
-        ('J', 11),
-        ('Q', 12),
-        ('K', 13),
-        ('A', 14),
-    ]);
+        let mut hands: Vec<Hand> = input.lines().map(Hand::parse).collect();
 
-    let mut hands: Vec<Hand> = Vec::new();
-
-    for line in input.lines() {
-        hands.push(hand_text_to_hand_struct(line));
+        calculate_answer(&mut hands, &part_1_card_cmp)
     }
+    fn part_2(&self, input: &str) -> u64 {
+        let mut hands: Vec<Hand> = input.lines().map(Hand::parse).collect();
 
-    let day_1_score = calculate_answer(&mut hands, &day_1_card_cmp);
-    println!("day 1 score: {}", day_1_score);
+        let mut part_2_card_cmp = Hand::card_strength();
+        part_2_card_cmp.insert('J', 1);
 
-    let mut day_2_card_cmp = day_1_card_cmp.clone();
-    day_2_card_cmp.insert('J', 1);
+        for hand in &mut hands {
+            let new_kind = maximize_card_score_with_joker(hand);
 
-    for hand in &mut hands {
-        let new_kind = maximize_card_score_with_joker(hand);
-
-        if hand.kind != new_kind {
-            hand.kind = new_kind;
+            if hand.kind != new_kind {
+                hand.kind = new_kind;
+            }
         }
+        calculate_answer(&mut hands, &part_2_card_cmp)
     }
-    let day_2_score = calculate_answer(&mut hands, &day_2_card_cmp);
+}
 
-    println!("day 2 score: {}", day_2_score);
+fn main() -> std::io::Result<()> {
+    DAY.run(InputType::UserInput)
 }

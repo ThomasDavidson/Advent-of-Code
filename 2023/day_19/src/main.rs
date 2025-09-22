@@ -1,3 +1,4 @@
+use library::input::{Day, InputType};
 use std::ops::Range;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -26,7 +27,7 @@ impl WorkflowCmp {
     fn parse(str: &str) -> Self {
         let greater: bool = str.contains("<");
 
-        let Some((catagory_str, threshold_str)) = (match greater {
+        let Some((category_str, threshold_str)) = (match greater {
             true => str.split_once("<"),
             false => str.split_once(">"),
         }) else {
@@ -36,11 +37,11 @@ impl WorkflowCmp {
         let Ok(threshold) = threshold_str.parse() else {
             panic!("Cannot parse threshold for workflow");
         };
-        let Some(catagory) = catagory_str.chars().nth(0) else {
-            panic!("Cannot parse catagory for workflow");
+        let Some(category) = category_str.chars().nth(0) else {
+            panic!("Cannot parse category for workflow");
         };
 
-        WorkflowCmp::Threshold(threshold, catagory, greater)
+        WorkflowCmp::Threshold(threshold, category, greater)
     }
 }
 
@@ -186,13 +187,10 @@ impl RatingsRange {
 }
 
 fn parse_ratings_input(ratings_str: &str) -> Vec<Ratings> {
-    ratings_str
-        .lines()
-        .map(|line| Ratings::parse(line))
-        .collect()
+    ratings_str.lines().map(Ratings::parse).collect()
 }
 
-fn check_machine_part(rating: &Ratings, workflows: &Vec<Workflow>) -> bool {
+fn check_machine_part(rating: &Ratings, workflows: &[Workflow]) -> bool {
     let mut workflow_result: WorkflowResult = WorkflowResult::Workflow("in".to_string());
 
     while !(workflow_result == WorkflowResult::Accept(true)
@@ -208,27 +206,21 @@ fn check_machine_part(rating: &Ratings, workflows: &Vec<Workflow>) -> bool {
         for rule in &selected_workflow.workflow_rule {
             let result = match rule.rule {
                 WorkflowCmp::Fallthrough => true,
-                WorkflowCmp::Threshold(threshold, catagory, greater) => match greater {
-                    true => rating.get_value(catagory) < threshold,
-                    false => rating.get_value(catagory) > threshold,
+                WorkflowCmp::Threshold(threshold, category, greater) => match greater {
+                    true => rating.get_value(category) < threshold,
+                    false => rating.get_value(category) > threshold,
                 },
             };
-            match (result, rule.result.clone()) {
-                (true, _) => {
-                    workflow_result = rule.result.clone();
-                    break;
-                }
-                (false, _) => (),
+            if let (true, _) = (result, rule.result.clone()) {
+                workflow_result = rule.result.clone();
+                break;
             }
         }
     }
-    match workflow_result {
-        WorkflowResult::Accept(true) => return true,
-        _ => return false,
-    }
+    matches!(workflow_result, WorkflowResult::Accept(true))
 }
 
-fn check_catagory_range(
+fn check_category_range(
     range: RatingsRange,
     workflows: &Vec<Workflow>,
     workflow_result: &WorkflowResult,
@@ -259,27 +251,27 @@ fn check_catagory_range(
                 result: WorkflowResult::Workflow(_),
                 rule: WorkflowCmp::Fallthrough,
             } => (
-                check_catagory_range(current_range, workflows, &rule.result),
+                check_category_range(current_range, workflows, &rule.result),
                 None,
             ),
 
             WorkflowRule {
                 result: _,
-                rule: WorkflowCmp::Threshold(threshold, catagory, greater),
+                rule: WorkflowCmp::Threshold(threshold, category, greater),
             } => {
-                if !current_range.contains(*catagory, *threshold) {
+                if !current_range.contains(*category, *threshold) {
                     continue;
                 }
-                let caragory_range = current_range.get_value(*catagory);
+                let category_range = current_range.get_value(*category);
 
-                let Some(max_range) = caragory_range.clone().max() else {
-                    panic!("Cannot get max value of range. The range might have been been reversed ex. max..min");
+                let Some(max_range) = category_range.clone().max() else {
+                    panic!("Cannot get max value of range. The range might have been reversed ex. max..min");
                 };
-                let Some(min_range) = caragory_range.clone().min() else {
-                    panic!("Cannot get min value of range. The range might have been been reversed ex. max..min");
+                let Some(min_range) = category_range.clone().min() else {
+                    panic!("Cannot get min value of range. The range might have been reversed ex. max..min");
                 };
 
-                let (accepted_range, regected_range) = match greater {
+                let (accepted_range, rejected_range) = match greater {
                     // only used Range to match arms
                     true => (min_range..*threshold, *threshold..(max_range + 1)),
                     false => ((threshold + 1)..(max_range + 1), min_range..(threshold + 1)),
@@ -288,18 +280,18 @@ fn check_catagory_range(
                 // process the accepted range
                 let accepted_result: usize = match rule.result {
                     WorkflowResult::Accept(true) => current_range
-                        .update_value(*catagory, accepted_range)
+                        .update_value(*category, accepted_range)
                         .get_permutations(),
                     WorkflowResult::Accept(false) => 0,
-                    WorkflowResult::Workflow(_) => check_catagory_range(
-                        current_range.update_value(*catagory, accepted_range),
+                    WorkflowResult::Workflow(_) => check_category_range(
+                        current_range.update_value(*category, accepted_range),
                         workflows,
                         &rule.result,
                     ),
                 };
                 (
                     accepted_result,
-                    Some(current_range.update_value(*catagory, regected_range)),
+                    Some(current_range.update_value(*category, rejected_range)),
                 )
             }
         };
@@ -314,47 +306,45 @@ fn check_catagory_range(
     result
 }
 
-fn part_1(ratings: &Vec<Ratings>, workflows: &Vec<Workflow>) -> usize {
-    ratings
-        .iter()
-        .map(|rating| match check_machine_part(rating, workflows) {
-            false => 0,
-            true => rating.get_sum(),
-        })
-        .fold(0, |acc, res| acc + res)
+struct Day19;
+const DAY: Day19 = Day19;
+impl Day<usize> for Day19 {
+    fn part_1(&self, input: &str) -> usize {
+        let Some((workflows_str, ratings_str)) = input.split_once("\r\n\r\n") else {
+            panic!("Invalid input");
+        };
+        let workflows = parse_workflows(workflows_str);
+        let ratings = parse_ratings_input(ratings_str);
+
+        ratings
+            .iter()
+            .map(|rating| match check_machine_part(rating, &workflows) {
+                false => 0,
+                true => rating.get_sum(),
+            })
+            .sum()
+    }
+    fn part_2(&self, input: &str) -> usize {
+        let Some((workflows_str, _)) = input.split_once("\r\n\r\n") else {
+            panic!("Invalid input");
+        };
+        let workflows = parse_workflows(workflows_str);
+
+        let initial_range: Range<usize> = 1..(4000 + 1);
+
+        let ratings_range = RatingsRange {
+            x: initial_range.clone(),
+            m: initial_range.clone(),
+            a: initial_range.clone(),
+            s: initial_range.clone(),
+        };
+
+        let initial = WorkflowResult::Workflow("in".to_string());
+
+        check_category_range(ratings_range, &workflows, &initial)
+    }
 }
 
-fn part_2(workflows: &Vec<Workflow>) -> usize {
-    let range: Range<usize> = 1..(4000 + 1);
-
-    let ratigns_range = RatingsRange {
-        x: range.clone(),
-        m: range.clone(),
-        a: range.clone(),
-        s: range.clone(),
-    };
-
-    let initial = WorkflowResult::Workflow("in".to_string());
-
-    let part_2_answer = check_catagory_range(ratigns_range, workflows, &initial);
-
-    part_2_answer
-}
-
-fn main() {
-    let input = include_str!("../input.txt");
-
-    let Some((workflows_str, ratings_str)) = input.split_once("\r\n\r\n") else {
-        panic!("Invalid input");
-    };
-
-    let workflows = parse_workflows(workflows_str);
-
-    let ratings = parse_ratings_input(ratings_str);
-
-    let part_1_score = part_1(&ratings, &workflows);
-    println!("part 1 answer: {part_1_score}");
-
-    let part_2_score = part_2(&workflows);
-    println!("part 2 answer: {part_2_score}");
+fn main() -> std::io::Result<()> {
+    DAY.run(InputType::UserInput)
 }

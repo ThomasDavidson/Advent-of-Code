@@ -1,7 +1,49 @@
-use library::grid::{Direction, DirectionFilter, GridState};
+use library::grid::{Direction, GridState, UVec2};
 use library::input::{Day, InputType};
+use std::ops::Range;
 use std::{fmt::Debug, str::FromStr};
 
+mod visited;
+use visited::VisitStates;
+
+struct Facility {
+    grid: Vec<Vec<usize>>,
+    dimensions: (usize, usize),
+}
+impl Facility {
+    fn parse(input: &str) -> Self {
+        let grid: Vec<Vec<usize>> = input.lines().map(parse_line).collect();
+        Self {
+            dimensions: (grid[0].len(), grid.len()),
+            grid,
+        }
+    }
+    fn get_weights(&self, coord: &UVec2<usize>, coord2: &UVec2<usize>) -> usize {
+        let y_range = if coord.y == coord2.y {
+            coord.y..=coord2.y
+        } else if coord.y < coord2.y {
+            coord.y..=(coord2.y - 1)
+        } else {
+            (coord2.y + 1)..=coord.y
+        };
+
+        let x_range = if coord.x == coord2.x {
+            coord.x..=coord2.x
+        } else if coord.x < coord2.x {
+            coord.x..=(coord2.x - 1)
+        } else {
+            (coord2.x + 1)..=coord.x
+        };
+
+        let mut sum = 0;
+        for y in y_range {
+            for x in x_range.clone() {
+                sum += self.grid[y][x];
+            }
+        }
+        sum
+    }
+}
 fn parse_line<T: FromStr>(line: &str) -> Vec<T>
 where
     <T as FromStr>::Err: Debug,
@@ -11,162 +53,105 @@ where
         .collect()
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 struct CrucibleState {
     grid: GridState,
     run: usize,
     weight: usize,
 }
-type NextDirection = dyn Fn(CrucibleState) -> Vec<Direction>;
+impl CrucibleState {
+    const fn score(&self, (goal_x, goal_y): (usize, usize)) -> usize {
+        self.distance_score((goal_x, goal_y))
+    }
+    const fn distance_score(&self, (goal_x, goal_y): (usize, usize)) -> usize {
+        self.grid.coords.x.abs_diff(goal_x) + self.grid.coords.y.abs_diff(goal_y)
+    }
 
-// take current state and return valid states for next iteration
-fn crucible_move(
-    grid: &[Vec<usize>],
-    state: CrucibleState,
-    next_direction: &NextDirection,
-) -> Vec<CrucibleState> {
-    let directions: Vec<Direction> = next_direction(state);
+    fn translate(
+        &self,
+        facility: &Facility,
+        direction: Direction,
+        distance: usize,
+    ) -> Option<Self> {
+        let grid = GridState {
+            direction,
+            coords: self.grid.coords,
+        };
+        let add = direction * distance as i32;
+        let new_grid = (grid + add).ok()?;
 
-    // bounds check
-    let width = grid[0].len();
-    let height = grid.len();
+        if !new_grid.check_bounds(facility.dimensions.0, facility.dimensions.1) {
+            return None;
+        }
 
-    directions
-        .iter()
-        .map(|&direction| CrucibleState {
-            // set run to zero if not same direction
-            grid: GridState {
-                direction,
-                ..state.grid
-            },
-            run: if direction == state.grid.direction {
-                state.run + 1
+        let weight = match new_grid.direction {
+            Direction::None => self.weight,
+            _ => self.weight + facility.get_weights(&new_grid.coords, &self.grid.coords),
+        };
+
+        Some(CrucibleState {
+            grid: new_grid,
+            run: if direction == self.grid.direction {
+                self.run + distance
             } else {
                 0
             },
-            ..state
+            weight,
         })
-        .filter(|new_state| new_state.grid.check_bounds(width, height))
-        .map(|new_state| CrucibleState {
-            grid: (new_state.grid + new_state.grid.direction).unwrap(),
-            ..new_state
-        })
-        // Calculate weight
-        .map(|new_state| {
-            // stopping doesn't add any weight
-            let new_weight = match new_state.grid.direction {
-                Direction::None => new_state.weight,
-                _ => new_state.weight + grid[new_state.grid.coords.y][new_state.grid.coords.x],
-            };
-            CrucibleState {
-                weight: new_weight,
-                ..new_state
-            }
-        })
-        .collect()
+    }
 }
-struct VisitStates {
-    states: Vec<VisitState>,
+type NextDirection<'a> = dyn Fn(CrucibleState) -> Vec<(Range<usize>, Direction)>;
+struct Crucible<'a> {
+    next_direction: &'a NextDirection<'a>,
+    max_distance: usize,
 }
-impl VisitStates {
-    fn set_weight(&mut self, run: usize, weight: usize, direction: Direction) -> bool {
-        let visit_find = self.find_mut(direction, run);
-        if let Some(visit) = visit_find {
-            // if new weight is lower than current weight
-            if weight < visit.weight {
-                *visit = VisitState { weight, ..*visit };
-            } else {
-                return false;
-            }
-        } else {
-            self.set(VisitState {
-                direction,
-                weight,
-                run,
-            });
-        }
-        true
-    }
-    fn find_mut(&mut self, direction: Direction, run: usize) -> Option<&mut VisitState> {
-        self.states
-            .iter_mut()
-            .find(|visit| (visit.direction == direction) && (visit.run == run))
-    }
-    fn find_stopped(&self) -> Option<&VisitState> {
-        self.states
-            .iter()
-            .find(|state| state.direction == Direction::None)
-    }
-    fn get_weight(&self, direction: Direction, run: usize) -> Option<&VisitState> {
-        self.states
-            .iter()
-            .find(|visit| (visit.direction == direction) && (visit.run == run))
-    }
-
-    fn set(&mut self, new_state: VisitState) {
-        self.states.push(new_state);
-    }
-    fn new() -> Self {
-        Self { states: Vec::new() }
+impl Crucible<'_> {
+    // take current state and return valid states for next iteration
+    fn crucible_move(&self, facility: &Facility, state: CrucibleState) -> Vec<CrucibleState> {
+        (self.next_direction)(state.clone())
+            .into_iter()
+            .flat_map(|(range, direction)| range.map(move |d| (d, direction)))
+            .filter(|(distance, direction)| {
+                !(state.run + distance > self.max_distance + 1 && direction != &Direction::None)
+            })
+            .filter_map(|(distance, direction)| state.translate(facility, direction, distance))
+            .collect()
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-struct VisitState {
-    direction: Direction,
-    weight: usize,
-    run: usize,
-}
 struct Visited {
     grid: Vec<Vec<VisitStates>>,
 }
 impl Visited {
-    fn get_weight(&self, state: &CrucibleState) -> usize {
-        let visit_state = &self.grid[state.grid.coords.y][state.grid.coords.x];
+    fn get(&self, x: usize, y: usize) -> &VisitStates {
+        &self.grid[y][x]
+    }
+    fn get_mut(&mut self, x: usize, y: usize) -> &mut VisitStates {
+        &mut self.grid[y][x]
+    }
 
-        match visit_state.get_weight(state.grid.direction, state.run) {
-            Some(a) => a.weight,
-            None => usize::MAX,
-        }
-    }
-    fn get_min_weight(&self, x: usize, y: usize) -> usize {
-        match self.grid[y][x].find_stopped() {
-            Some(a) => a.weight,
-            None => usize::MAX,
-        }
-    }
-    fn set_weight(&mut self, state: &CrucibleState) -> bool {
-        self.grid[state.grid.coords.y][state.grid.coords.x].set_weight(
-            state.run,
-            state.weight,
-            state.grid.direction,
-        )
-    }
-    fn _print_weights(&self, threshold: usize) {
-        for (y, line) in self.grid.iter().enumerate() {
-            for (x, _) in line.iter().enumerate() {
-                let weight = &self.grid[y][x];
-                for v_state in weight.states.iter() {
-                    if v_state.weight <= threshold {
-                        match v_state.direction {
-                            Direction::North => print!("N"),
-                            Direction::East => print!("E"),
-                            Direction::South => print!("S"),
-                            Direction::West => print!("W"),
-                            Direction::None => print!("N"),
-                        }
-                        if v_state.weight == usize::MAX {
-                            print!(".");
-                        } else {
-                            print!("{} ", v_state.weight);
-                        }
-                    }
-                }
+    fn _debug(&self) {
+        for y in &self.grid {
+            for x in y {
+                let w = x.get_stopped();
+                let mw = x._iter().min_by(|a, b| a.1.cmp(b.1));
+                let (direction, direction_weight) = if let Some(r) = mw {
+                    (r.0 .0, *r.1)
+                } else {
+                    (Direction::None, 0)
+                };
 
-                print!(",");
+                let c = if w == usize::MAX {
+                    format!("{} {direction_weight}", direction.to_char())
+                } else {
+                    format!("{w}")
+                };
+
+                print!("{c:<5},");
             }
             println!();
         }
+        println!();
     }
 }
 
@@ -192,43 +177,53 @@ fn _print_grid(grid: &[Vec<char>]) {
 }
 
 fn get_lowest_heat_loss(
-    grid: &[Vec<usize>],
+    facility: &Facility,
     initial: &CrucibleState,
     (goal_x, goal_y): (usize, usize),
-    next_direction: &NextDirection,
+    crucible: Crucible,
 ) -> usize {
     // bounds check
-    let mut states: Vec<CrucibleState> = vec![*initial];
+    let mut states: Vec<CrucibleState> = vec![initial.clone()];
 
     let mut visited = Visited {
-        grid: grid
+        grid: facility
+            .grid
             .iter()
             .map(|a| a.iter().map(|_| VisitStates::new()).collect())
             .collect(),
     };
 
     while !states.is_empty() {
-        if visited.get_min_weight(goal_x, goal_y) == usize::MAX {
+        if visited.get(goal_x, goal_y).get_stopped() == usize::MAX {
             states.sort_by(|a, b| {
-                let a_dist = a.grid.coords.x.abs_diff(goal_x) + a.grid.coords.y.abs_diff(goal_y);
-                let b_dist = b.grid.coords.x.abs_diff(goal_x) + b.grid.coords.y.abs_diff(goal_y);
+                let a_dist = a.distance_score((goal_x, goal_y));
+                let b_dist = b.distance_score((goal_x, goal_y));
 
                 b_dist.partial_cmp(&a_dist).unwrap()
             });
         }
 
         let state = states.pop().unwrap();
-        visited.set_weight(&state);
 
-        let mut new_states = crucible_move(grid, state, next_direction);
-        new_states.sort_by(|a, b| b.weight.partial_cmp(&a.weight).unwrap());
+        visited
+            .get_mut(state.grid.coords.x, state.grid.coords.y)
+            .set_weight(state.run, state.weight, state.grid.direction);
+
+        let mut new_states = crucible.crucible_move(facility, state.clone());
+        new_states.sort_by(|a, b| {
+            a.score((goal_x, goal_y))
+                .partial_cmp(&b.score((goal_x, goal_y)))
+                .unwrap()
+        });
 
         for s in new_states {
-            let pos_min_weight = visited.get_weight(&s);
-            let goal_min_weight = visited.get_min_weight(goal_x, goal_y);
+            let pos_min_weight = visited
+                .get(s.grid.coords.x, s.grid.coords.y)
+                .get_weight(s.grid.direction, s.run);
 
-            let distance_to_goal =
-                s.grid.coords.x.abs_diff(goal_x) + s.grid.coords.y.abs_diff(goal_y);
+            let goal_min_weight = visited.get(goal_x, goal_y).get_stopped();
+
+            let distance_to_goal = s.distance_score((goal_x, goal_y));
             // compares with other iterations that have visited this node
             // and that have visited the goal with a distance penalty
             if pos_min_weight > s.weight && goal_min_weight > (s.weight + distance_to_goal - 1) {
@@ -237,14 +232,16 @@ fn get_lowest_heat_loss(
         }
     }
 
-    visited.get_min_weight(goal_x, goal_y)
+    visited.get(goal_x, goal_y).get_stopped()
 }
 
 struct Day17;
 const DAY: Day17 = Day17;
 impl Day<usize> for Day17 {
     fn part_1(&self, input: &str) -> usize {
-        let grid: Vec<Vec<usize>> = input.lines().map(parse_line).collect();
+        let facility = Facility::parse(input);
+        let (width, height) = facility.dimensions;
+        let (width, height) = (width - 1, height - 1);
 
         let initial_grid = GridState::new(0, 0, Direction::None);
         let initial: CrucibleState = CrucibleState {
@@ -253,70 +250,82 @@ impl Day<usize> for Day17 {
             weight: 0,
         };
 
-        // bounds check
-        let width = grid[0].len() - 1;
-        let height = grid.len() - 1;
+        const DEF_RANGE: Range<usize> = 1..4;
 
         let filter: &NextDirection = &|state: CrucibleState| match (state.run, state.grid.direction)
         {
             // stop cannot start again
             (0, Direction::None) => vec![],
             // Starting state
-            (1, Direction::None) => vec![
-                Direction::North,
-                Direction::East,
-                Direction::South,
-                Direction::West,
-            ],
+            (1, Direction::None) => {
+                vec![
+                    (DEF_RANGE, Direction::East),
+                    (DEF_RANGE, Direction::West),
+                    (DEF_RANGE, Direction::North),
+                    (DEF_RANGE, Direction::South),
+                ]
+            }
             // all except inverse
-            (0..=1, d) => d.next(vec![
-                DirectionFilter::Forward,
-                DirectionFilter::Turn,
-                DirectionFilter::Stop,
-            ]),
-            // only right or left
-            (2, d) => d.next(vec![DirectionFilter::Turn, DirectionFilter::Stop]),
+            (0..=3, d) => {
+                vec![
+                    (DEF_RANGE, d.right()),
+                    (DEF_RANGE, d.left()),
+                    (0..1, Direction::None),
+                ]
+            }
             _ => panic!("Invalid state"),
         };
 
-        get_lowest_heat_loss(&grid, &initial, (width, height), &filter)
+        let crucible = Crucible {
+            next_direction: filter,
+            max_distance: 3,
+        };
+
+        get_lowest_heat_loss(&facility, &initial, (width, height), crucible)
     }
     fn part_2(&self, input: &str) -> usize {
-        let grid: Vec<Vec<usize>> = input.lines().map(parse_line).collect();
+        let facility = Facility::parse(input);
+        // bounds check
+        let (width, height) = facility.dimensions;
+        let (width, height) = (width - 1, height - 1);
 
+        let initial_grid = GridState::new(0, 0, Direction::None);
         let initial: CrucibleState = CrucibleState {
-            grid: GridState::new(0, 0, Direction::None),
+            grid: initial_grid,
             run: 1,
             weight: 0,
         };
 
-        // bounds check
-        let width = (grid[0].len() - 1) as usize;
-        let height = (grid.len() - 1) as usize;
+        const DEF_RANGE: Range<usize> = 4..11;
 
         let filter: &NextDirection = &|state: CrucibleState| match (state.run, state.grid.direction)
         {
             // stop cannot start again
             (0, Direction::None) => vec![],
             // Starting state
-            (1, Direction::None) => vec![
-                Direction::North,
-                Direction::East,
-                Direction::South,
-                Direction::West,
-            ],
-            // all except inverse
-            (0..=2, d) => d.next(vec![DirectionFilter::Forward]),
-            (3..=8, d) => d.next(vec![
-                DirectionFilter::Forward,
-                DirectionFilter::Turn,
-                DirectionFilter::Stop,
-            ]),
-            // only right or left
-            (9, d) => d.next(vec![DirectionFilter::Turn, DirectionFilter::Stop]),
-            _ => panic!("Invalid state"),
+            (1, Direction::None) => {
+                vec![
+                    (DEF_RANGE, Direction::East),
+                    (DEF_RANGE, Direction::West),
+                    (DEF_RANGE, Direction::North),
+                    (DEF_RANGE, Direction::South),
+                ]
+            }
+            (0..=9, d) => {
+                vec![
+                    (DEF_RANGE, d.right()),
+                    (DEF_RANGE, d.left()),
+                    (0..1, Direction::None),
+                ]
+            }
+
+            _ => panic!("Invalid state {state:?}"),
         };
-        get_lowest_heat_loss(&grid, &initial, (width, height), &filter)
+        let crucible = Crucible {
+            next_direction: filter,
+            max_distance: 10,
+        };
+        get_lowest_heat_loss(&facility, &initial, (width, height), crucible)
     }
 }
 
@@ -326,38 +335,56 @@ fn main() -> std::io::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::{Day17, Facility};
+    use library::grid::UVec2;
+    use library::input::Day;
+    const DAY: Day17 = Day17;
     #[test]
     fn check_example_1() {
         let input = include_str!("../example.txt");
-        let grid: Vec<Vec<usize>> = input
-            .lines()
-            .map(|line| {
-                line.chars()
-                    .map(|c| c.to_string().parse::<usize>().unwrap())
-                    .collect()
-            })
-            .collect();
-
-        let part_1_answer = part_1(grid.clone());
-
-        assert_eq!(part_1_answer, 102);
+        assert_eq!(DAY.part_1(input), 102);
     }
 
     #[test]
     fn check_example_2() {
         let input = include_str!("../example2.txt");
-        let grid: Vec<Vec<usize>> = input
-            .lines()
-            .map(|line| {
-                line.chars()
-                    .map(|c| c.to_string().parse::<usize>().unwrap())
-                    .collect()
-            })
-            .collect();
+        assert_eq!(DAY.part_2(input), 71);
+    }
+    #[test]
+    fn check_example_3() {
+        let input = include_str!("../example3.txt");
+        assert_eq!(DAY.part_2(input), 59);
+    }
+    #[test]
+    fn check_example_4() {
+        let input = include_str!("../example4.txt");
+        assert_eq!(DAY.part_2(input), 44);
+    }
+    #[test]
+    fn check_example_5() {
+        let input = include_str!("../example5.txt");
+        assert_eq!(DAY.part_2(input), 8);
+    }
+    #[test]
+    fn check_weight() {
+        let input = include_str!("../example.txt");
 
-        let part_1_answer = part_2(grid.clone());
+        let facility = Facility::parse(input);
 
-        assert_eq!(part_1_answer, 71);
+        let tests: Vec<(UVec2<_>, UVec2<_>, usize)> = vec![
+            (UVec2::new(0, 0), UVec2::new(0, 1), 2),
+            (UVec2::new(0, 0), UVec2::new(1, 0), 2),
+            (UVec2::new(0, 1), UVec2::new(0, 0), 3),
+            (UVec2::new(1, 0), UVec2::new(0, 0), 4),
+            (UVec2::new(0, 0), UVec2::new(0, 2), 5),
+            (UVec2::new(0, 0), UVec2::new(2, 0), 6),
+            (UVec2::new(0, 2), UVec2::new(0, 0), 6),
+            (UVec2::new(2, 0), UVec2::new(0, 0), 5),
+        ];
+
+        for (coord, coord2, expected) in tests {
+            let score = facility.get_weights(&coord, &coord2);
+            assert_eq!(score, expected);
+        }
     }
 }
