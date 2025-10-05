@@ -185,9 +185,9 @@ impl fmt::Display for Apparatus {
 }
 
 #[derive(Clone)]
-struct Day18;
-const DAY: Day18 = Day18;
-impl Day<usize> for Day18 {
+struct Day25;
+const DAY: Day25 = Day25;
+impl Day<usize> for Day25 {
     fn part_1(&self, input: &str) -> usize {
         // process input
         let orig_apparatus = Apparatus::from_str(input);
