@@ -93,7 +93,6 @@ fn calculate_area_from_instructions(instructions: Vec<Instruction>) -> u64 {
     inside_area + b as u64
 }
 
-#[derive(Clone)]
 struct Day18;
 const DAY: Day18 = Day18;
 impl Day<u64> for Day18 {
@@ -101,12 +100,12 @@ impl Day<u64> for Day18 {
         let instructions = part_1_decode_instructions(input);
         calculate_area_from_instructions(instructions)
     }
-    fn part_2(&mut self, input: &str) -> u64 {
+    fn part_2(&self, input: &str) -> u64 {
         let instructions = part_2_decode_instructions(input);
         calculate_area_from_instructions(instructions)
     }
 }
 
 fn main() -> std::io::Result<()> {
-    DAY.clone().run(InputType::UserInput)
+    DAY.run(InputType::UserInput)
 }
