@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 rand = "0.9.2"
-library = { version = "0.1.0", path = "../../library" }
+library = { git="https://github.com/ThomasDavidson/Advent-of-Code-Library.git", tag = "v0.2.0"}
