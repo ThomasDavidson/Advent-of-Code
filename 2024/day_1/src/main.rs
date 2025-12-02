@@ -20,7 +20,6 @@ impl List {
     }
 }
 
-#[derive(Clone)]
 struct Day1;
 const DAY: Day1 = Day1;
 impl Day<u32> for Day1 {
@@ -32,7 +31,7 @@ impl Day<u32> for Day1 {
 
         iter::zip(list.left_list, list.right_list).fold(0, |acc, (l, r)| acc + l.abs_diff(r))
     }
-    fn part_2(&mut self, input: &str) -> u32 {
+    fn part_2(&self, input: &str) -> u32 {
         let mut list = List::parse(input);
 
         list.left_list.sort();
@@ -48,9 +47,9 @@ impl Day<u32> for Day1 {
                     * left
             })
             .sum()
-     }
+    }
 }
 
 fn main() -> std::io::Result<()> {
-    DAY.clone().run(InputType::UserInput)
+    DAY.run(InputType::UserInput)
 }

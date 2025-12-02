@@ -70,7 +70,6 @@ impl Multiply {
     }
 }
 
-#[derive(Clone)]
 struct Day3;
 const DAY: Day3 = Day3;
 impl Day<u32> for Day3 {
@@ -81,7 +80,7 @@ impl Day<u32> for Day3 {
             .map(Multiply::compute)
             .sum()
     }
-    fn part_2(&mut self, input: &str) -> u32 {
+    fn part_2(&self, input: &str) -> u32 {
         let mut active = true;
         let mut part_2_answer = 0;
 
@@ -111,5 +110,5 @@ impl Day<u32> for Day3 {
 }
 
 fn main() -> std::io::Result<()> {
-    DAY.clone().run(InputType::UserInput)
+    DAY.run(InputType::UserInput)
 }
