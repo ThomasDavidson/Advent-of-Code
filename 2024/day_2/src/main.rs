@@ -1,4 +1,4 @@
-use std::time::Instant;
+use library::input::{Day, InputType};
 
 fn valid_increment(increment: i64, is_ascending: bool) -> bool {
     is_ascending == (increment > 0) && increment.abs() <= 3 && increment.abs() > 0
@@ -37,7 +37,7 @@ impl Report {
             return true;
         }
 
-        return false;
+        false
     }
 
     fn is_valid_part_2(&self, is_ascending: bool, reverse_check: bool) -> bool {
@@ -100,61 +100,46 @@ impl Report {
             i += 1;
         }
 
-        return true;
+        true
     }
 }
 
 type Reports = Vec<Report>;
 
 fn reports_from_str(input: &str) -> Reports {
-    let reports = input.lines().map(|line| Report::from_line(line)).collect();
-
-    reports
+    input.lines().map(Report::from_line).collect()
 }
 
-fn part_1(input: &str) -> u32 {
-    let reports = reports_from_str(input);
+#[derive(Clone)]
+struct Day2;
+const DAY: Day2 = Day2;
+impl Day<u32> for Day2 {
+    fn part_1(&self, input: &str) -> u32 {
+        let reports = reports_from_str(input);
 
-    let mut part_1_answer = 0;
-
-    for report in reports {
-        if report.is_valid() {
-            part_1_answer += 1;
-        };
+        reports
+            .iter()
+            .map(Report::is_valid)
+            .map(|is_valid| if is_valid { 1 } else { 0 })
+            .sum()
     }
-    part_1_answer
-}
+    fn part_2(&mut self, input: &str) -> u32 {
+        let reports = reports_from_str(input);
 
-fn part_2(input: &str) -> u32 {
-    let reports = reports_from_str(input);
-
-    let mut part_2_answer = 0;
-
-    for report in reports {
-        if !(report.is_valid()
-            || report.is_valid_part_2(true, false)
-            || report.is_valid_part_2(false, false)
-            || report.is_valid_part_2(true, true)
-            || report.is_valid_part_2(false, true))
-        {
-            continue;
-        }
-
-        part_2_answer += 1;
+        reports
+            .iter()
+            .map(|report| {
+                report.is_valid()
+                    || report.is_valid_part_2(true, false)
+                    || report.is_valid_part_2(false, false)
+                    || report.is_valid_part_2(true, true)
+                    || report.is_valid_part_2(false, true)
+            })
+            .map(|is_valid| if is_valid { 1 } else { 0 })
+            .sum()
     }
-    part_2_answer
 }
 
-fn main() {
-    let input = include_str!("../input.txt");
-
-    let start: Instant = Instant::now();
-    let part_1_answer = part_1(&input);
-    let duration = start.elapsed();
-    println!("Part 1 answer: {}, time: {:?}", part_1_answer, duration);
-
-    let start: Instant = Instant::now();
-    let part_2_answer = part_2(&input);
-    let duration = start.elapsed();
-    println!("Part 2 answer: {}, time: {:?}", part_2_answer, duration);
+fn main() -> std::io::Result<()> {
+    DAY.clone().run(InputType::UserInput)
 }
