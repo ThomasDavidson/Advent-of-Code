@@ -1,7 +1,9 @@
-use reqwest::{Client, Url};
+use reqwest::{Client, Response, StatusCode, Url};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::{fs, io};
+
+const USER_AGENT: &str = "github.com/ThomasDavidson/Advent-of-Code by endershadow909@gmail.com";
 
 fn generate_file_path(year: u16, day: u8) -> PathBuf {
     PathBuf::from(format!("./{year}/day_{day}/input.txt"))
@@ -9,6 +11,16 @@ fn generate_file_path(year: u16, day: u8) -> PathBuf {
 
 fn generate_download_link(year: u16, day: u8) -> String {
     format!("https://adventofcode.com/{year}/day/{day}/input")
+}
+
+async fn request_input(session_cookie: &[u8], url: Url) -> Response {
+    Client::new()
+        .get(url)
+        .header("Cookie", session_cookie)
+        .header("User-Agent", USER_AGENT)
+        .send()
+        .await
+        .expect("Download failed, add session id to file if you haven't")
 }
 
 #[tokio::main]
@@ -34,12 +46,11 @@ async fn main() -> io::Result<()> {
 
             let url = Url::from_str(&download_link).unwrap();
 
-            let response = Client::new()
-                .get(url)
-                .header("Cookie", session_cookie.clone())
-                .send()
-                .await
-                .expect("Download failed, add session id to file if you haven't");
+            let response = request_input(&session_cookie, url).await;
+
+            if response.status() == StatusCode::BAD_REQUEST {
+                panic!("Bad Request: Check format of session file")
+            }
 
             let text = response.text().await.unwrap();
 
@@ -48,10 +59,10 @@ async fn main() -> io::Result<()> {
                     println!("Can't write file check path");
                     break;
                 }
-                Ok(_) => (),
+                Ok(_) => println!("Success"),
             }
 
-            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
         }
     }
 
