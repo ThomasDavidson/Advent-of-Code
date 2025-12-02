@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-library = { version = "0.1.0", path = "../../library" }
+library = { git="https://github.com/ThomasDavidson/Advent-of-Code-Library.git", tag = "v0.2.0"}
 shoelace = "0.1.3"

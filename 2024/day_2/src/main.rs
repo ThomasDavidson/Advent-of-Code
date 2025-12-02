@@ -110,7 +110,6 @@ fn reports_from_str(input: &str) -> Reports {
     input.lines().map(Report::from_line).collect()
 }
 
-#[derive(Clone)]
 struct Day2;
 const DAY: Day2 = Day2;
 impl Day<u32> for Day2 {
@@ -123,7 +122,7 @@ impl Day<u32> for Day2 {
             .map(|is_valid| if is_valid { 1 } else { 0 })
             .sum()
     }
-    fn part_2(&mut self, input: &str) -> u32 {
+    fn part_2(&self, input: &str) -> u32 {
         let reports = reports_from_str(input);
 
         reports
@@ -141,5 +140,5 @@ impl Day<u32> for Day2 {
 }
 
 fn main() -> std::io::Result<()> {
-    DAY.clone().run(InputType::UserInput)
+    DAY.run(InputType::UserInput)
 }
