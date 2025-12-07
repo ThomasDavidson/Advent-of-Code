@@ -26,16 +26,26 @@ impl TachyonManifold {
         &mut self.grid[coord.y][coord.x]
     }
 
-    fn propagate_laser(&mut self) {
+    fn propagate_laser(&mut self) -> usize {
         let height = self.grid.len();
         let width = self.grid[0].len();
+
+        let mut visited: Vec<Vec<usize>> = self
+            .grid
+            .iter()
+            .map(|line| {
+                line.iter()
+                    .map(|tile| if *tile == Tile::Start { 1 } else { 0 })
+                    .collect()
+            })
+            .collect();
 
         for y in 0..height {
             for x in 0..width {
                 let coord = Coord { x, y };
-                let tile = self.get(coord);
+                let prev_tile = self.get(coord).to_owned();
 
-                let laser = tile.laser_property();
+                let laser = prev_tile.laser_property();
 
                 // println!("{coord:?}: {tile}");
 
@@ -61,9 +71,17 @@ impl TachyonManifold {
                     } else if *tile == Tile::Splitter {
                         *tile = Tile::ActivatedSplitter
                     }
+
+                    visited[next.y][next.x] += visited[coord.y][coord.x];
+                    // if prev_tile == Tile::Splitter || prev_tile == Tile::ActivatedSplitter {
+                    //     visited[next.y][next.x] += 1;
+                    // } else {
+                    // }
                 }
             }
         }
+
+        visited.into_iter().last().unwrap().iter().sum()
     }
 }
 impl fmt::Display for TachyonManifold {
@@ -141,8 +159,8 @@ impl Day<u64> for Day7 {
 
         grid::find_in_coord(&tachyon_manifolds.grid, &Tile::ActivatedSplitter).len() as u64
     }
-    fn part_2(&self, _input: &str) -> u64 {
-        0
+    fn part_2(&self, input: &str) -> u64 {
+        TachyonManifold::parse(input).propagate_laser() as u64
     }
 }
 
