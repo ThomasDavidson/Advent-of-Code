@@ -42,7 +42,7 @@ impl Day<u64> for Day9 {
         }
         part_1_answer
     }
-    fn part_2(&self, input: &str) -> u64 {
+    fn part_2(&self, _input: &str) -> u64 {
         0
     }
 }
