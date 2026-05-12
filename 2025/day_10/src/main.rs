@@ -1,9 +1,12 @@
+use itertools::Itertools;
 use library::input::{Day, InputType};
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Formatter;
+use std::slice::Iter;
+use std::time::Instant;
 
-type Press = u8;
+type Press = u16;
 
 struct Machines {
     machines: Vec<Machine>,
@@ -18,7 +21,7 @@ impl Machines {
 #[derive(Debug)]
 struct Machine {
     indicator_diagram: IndicatorDiagram,
-    wiring_diagrams: Vec<WiringDiagram>,
+    wiring_diagrams: WiringDiagrams,
     joltage_requirement: JoltageRequirment,
 }
 impl Machine {
@@ -35,25 +38,29 @@ impl Machine {
 
         Self {
             indicator_diagram,
-            wiring_diagrams,
+            wiring_diagrams: WiringDiagrams::new(wiring_diagrams),
             joltage_requirement,
         }
     }
 
+    // part 1 toggle state on or off
     fn press_button(&self, button: usize, state: u16) -> u16 {
-        state ^ self.wiring_diagrams[button].instructions
+        state ^ self.wiring_diagrams.get(button).instructions
     }
-    fn joltage_button(&self, button: usize, state: &Vec<Press>) -> (Vec<Press>, usize) {
-        let num = self.joltage_requirement.check_requirement(&state[..]).len() as u8;
+    fn get_instructions(&self, button: usize) -> u16 {
+        self.wiring_diagrams.get(button).instructions
+    }
+    // press button until one of the requirements are met
+    fn joltage_button(&self, button: usize, mut state: Vec<Press>) -> (Vec<Press>, usize) {
+        let num = self.joltage_requirement.check_requirement(&state[..]).len();
         let mut count = 0;
 
-        let mut state: Vec<Press> = state.clone();
         loop {
             count = count + 1;
-            for i in &self.wiring_diagrams[button].positions {
+            for i in &self.wiring_diagrams.get(button).positions {
                 state[*i] += 1
             }
-            let new_num = self.joltage_requirement.check_requirement(&state[..]).len() as u8;
+            let new_num = self.joltage_requirement.check_requirement(&state[..]).len();
             if new_num != num {
                 break;
             }
@@ -63,15 +70,20 @@ impl Machine {
 
     fn config_wiring(&self) -> u32 {
         let mut states: VecDeque<(u16, usize)> = vec![(0, 1)].into();
+        let goal = self.indicator_diagram.indicator;
 
         while let Some((state, count)) = states.pop_front() {
             for button in 0..self.wiring_diagrams.len() {
-                let state = self.press_button(button, state);
+                if self.get_instructions(button) & (goal ^ state) == 0 {
+                    continue;
+                }
 
-                if state == self.indicator_diagram.indicator {
+                let new_state = self.press_button(button, state);
+
+                if new_state == goal {
                     return count as u32;
                 } else {
-                    states.push_back((state, count + 1))
+                    states.push_back((new_state, count + 1))
                 }
             }
         }
@@ -84,10 +96,12 @@ impl Machine {
 
         let mut minimum = u32::MAX;
 
-        let mut states: Vec<(Vec<Press>, usize)> = vec![(vec![0; joltage_size], 0)].into();
+        let mut states: VecDeque<(Vec<Press>, usize)> = vec![(vec![0; joltage_size], 0)].into();
 
         let mut i: u64 = 0;
-        while let Some((state, count)) = states.pop() {
+        let mut max_count = 0;
+        while let Some((state, count)) = states.pop_front() {
+            max_count = max_count.max(count);
             let required = self.joltage_requirement.check_requirement(&state[..]);
 
             let buttons: Vec<usize> = self
@@ -106,10 +120,9 @@ impl Machine {
                     }
                 })
                 .collect();
-
             for button in buttons {
                 i = i + 1;
-                let (state, pressed) = self.joltage_button(button, &state);
+                let (state, pressed) = self.joltage_button(button, state.clone());
                 let count = count + pressed;
 
                 if state
@@ -118,8 +131,8 @@ impl Machine {
                     .all(|(a, b)| *a >= *b as Press)
                 {
                     minimum = minimum.min(count as u32);
-                } else {
-                    states.push((state.clone(), count))
+                } else if count < minimum as usize {
+                    states.push_back((state.clone(), count))
                 }
             }
         }
@@ -159,6 +172,59 @@ impl fmt::Debug for IndicatorDiagram {
     }
 }
 
+#[derive(Debug)]
+struct WiringDiagrams {
+    wiring_diagrams: Vec<WiringDiagram>,
+}
+impl WiringDiagrams {
+    fn new(wiring_diagrams: Vec<WiringDiagram>) -> Self {
+        Self { wiring_diagrams }
+    }
+    fn get(&self, index: usize) -> &WiringDiagram {
+        &self.wiring_diagrams[index]
+    }
+    fn len(&self) -> usize {
+        self.wiring_diagrams.len()
+    }
+    fn iter(&self) -> Iter<'_, WiringDiagram> {
+        self.wiring_diagrams.iter()
+    }
+    fn remove_redundant_buttons(&mut self) {
+        let mut remove: Vec<usize> = Vec::new();
+        for wiring_diagram in self
+            .wiring_diagrams
+            .clone()
+            .iter()
+            .enumerate()
+            .combinations(2)
+        {
+            let (i, first) = wiring_diagram[0];
+            let (j, second) = wiring_diagram[1];
+            if first
+                .positions
+                .iter()
+                .all(|&pos| second.positions.contains(&pos))
+            {
+                remove.push(i);
+            }
+
+            if second
+                .positions
+                .iter()
+                .all(|&pos| first.positions.contains(&pos))
+            {
+                remove.push(j);
+            }
+        }
+        remove.sort();
+        remove.dedup();
+        for i in remove.iter().rev() {
+            self.wiring_diagrams.remove(*i);
+        }
+    }
+}
+
+#[derive(Clone)]
 struct WiringDiagram {
     instructions: u16,
     positions: Vec<usize>,
@@ -246,11 +312,16 @@ impl Day<u64> for Day10 {
         part_1_answer
     }
     fn part_2(&self, input: &str) -> u64 {
-        let machines = Machines::parse(input);
+        let mut machines = Machines::parse(input);
+
+        for machine in machines.machines.iter_mut() {
+            machine.wiring_diagrams.remove_redundant_buttons()
+        }
 
         let mut part_2_answer = 0;
 
-        for machine in machines.machines.iter() {
+        for (i, machine) in machines.machines.iter().enumerate() {
+            eprint!("{}/{}\t", i, machines.machines.len());
             let pressed = machine.minimum_config_joltage();
             if pressed == u32::MAX {
                 panic!()
@@ -264,5 +335,5 @@ impl Day<u64> for Day10 {
 }
 
 fn main() -> std::io::Result<()> {
-    DAY.run(InputType::Example)
+    DAY.run(InputType::UserInput)
 }

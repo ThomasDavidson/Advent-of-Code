@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 library = { git = "https://github.com/ThomasDavidson/Advent-of-Code-Library.git", tag = "v0.2.0" }
+itertools = "0.13.0"
