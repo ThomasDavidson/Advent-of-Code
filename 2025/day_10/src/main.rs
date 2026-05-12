@@ -4,7 +4,6 @@ use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Formatter;
 use std::slice::Iter;
-use std::time::Instant;
 
 type Press = u16;
 
@@ -68,6 +67,7 @@ impl Machine {
         (state, count)
     }
 
+    // get fewest button presses for part 1
     fn config_wiring(&self) -> u32 {
         let mut states: VecDeque<(u16, usize)> = vec![(0, 1)].into();
         let goal = self.indicator_diagram.indicator;
@@ -91,10 +91,10 @@ impl Machine {
         panic!()
     }
 
-    fn minimum_config_joltage(&self) -> u32 {
+    fn minimum_config_joltage(&self) -> Option<u32> {
         let joltage_size = self.joltage_requirement.requirements.len();
 
-        let mut minimum = u32::MAX;
+        let mut minimum: Option<u32> = None;
 
         let mut states: VecDeque<(Vec<Press>, usize)> = vec![(vec![0; joltage_size], 0)].into();
 
@@ -130,8 +130,8 @@ impl Machine {
                     .zip(self.joltage_requirement.requirements.iter())
                     .all(|(a, b)| *a >= *b as Press)
                 {
-                    minimum = minimum.min(count as u32);
-                } else if count < minimum as usize {
+                    minimum = Some(minimum.unwrap_or(u32::MAX).min(count as u32));
+                } else if count < minimum.unwrap_or(u32::MAX) as usize {
                     states.push_back((state.clone(), count))
                 }
             }
@@ -321,11 +321,10 @@ impl Day<u64> for Day10 {
         let mut part_2_answer = 0;
 
         for (i, machine) in machines.machines.iter().enumerate() {
-            eprint!("{}/{}\t", i, machines.machines.len());
-            let pressed = machine.minimum_config_joltage();
-            if pressed == u32::MAX {
+            eprintln!("{}/{}\t", i, machines.machines.len());
+            let Some(pressed) = machine.minimum_config_joltage() else {
                 panic!()
-            }
+            };
 
             part_2_answer += pressed as u64;
         }
@@ -335,5 +334,5 @@ impl Day<u64> for Day10 {
 }
 
 fn main() -> std::io::Result<()> {
-    DAY.run(InputType::UserInput)
+    DAY.run(InputType::Example)
 }
