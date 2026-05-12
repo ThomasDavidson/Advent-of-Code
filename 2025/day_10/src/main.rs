@@ -17,11 +17,10 @@ impl Machines {
     }
 }
 
-#[derive(Debug)]
 struct Machine {
     indicator_diagram: IndicatorDiagram,
     wiring_diagrams: WiringDiagrams,
-    joltage_requirement: JoltageRequirment,
+    joltage_requirement: JoltageRequirement,
 }
 impl Machine {
     fn parse(line: &str) -> Self {
@@ -33,7 +32,7 @@ impl Machine {
             wiring.split(" ").map(WiringDiagram::parse).collect();
         wiring_diagrams.sort_by(|b, a| a.positions.len().cmp(&b.positions.len()));
 
-        let joltage_requirement = JoltageRequirment::parse(rest);
+        let joltage_requirement = JoltageRequirement::parse(rest);
 
         Self {
             indicator_diagram,
@@ -103,7 +102,6 @@ impl Machine {
         while let Some((state, count)) = states.pop_front() {
             max_count = max_count.max(count);
             let required = self.joltage_requirement.check_requirement(&state[..]);
-
             let buttons: Vec<usize> = self
                 .wiring_diagrams
                 .iter()
@@ -140,8 +138,19 @@ impl Machine {
         minimum
     }
 }
+impl fmt::Debug for Machine {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.indicator_diagram)?;
+        write!(f, "{}", self.wiring_diagrams)?;
+        write!(f, " {}", self.joltage_requirement)?;
+
+        Ok(())
+    }
+}
+
 struct IndicatorDiagram {
     indicator: u16,
+    len: usize,
 }
 impl IndicatorDiagram {
     fn parse(text: &str) -> Self {
@@ -153,6 +162,7 @@ impl IndicatorDiagram {
                 _ => None,
             })
             .collect();
+        let len = indicators.len();
 
         let mut indicator: u16 = 0;
         for (indicator_pos, state) in indicators.iter().enumerate() {
@@ -162,13 +172,27 @@ impl IndicatorDiagram {
             indicator |= 1 << indicator_pos;
         }
 
-        Self { indicator }
+        Self { indicator, len }
     }
 }
 
 impl fmt::Debug for IndicatorDiagram {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{:#011b}", self.indicator)
+    }
+}
+impl fmt::Display for IndicatorDiagram {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "[")?;
+        for i in 0..self.len {
+            if self.indicator >> i & 1 == 1 {
+                write!(f, "#")?;
+            } else {
+                write!(f, ".")?;
+            }
+        }
+        write!(f, "]")?;
+        Ok(())
     }
 }
 
@@ -223,6 +247,14 @@ impl WiringDiagrams {
         }
     }
 }
+impl fmt::Display for WiringDiagrams {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for wiring_diagram in self.wiring_diagrams.iter() {
+            write!(f, " {}", wiring_diagram)?;
+        }
+        Ok(())
+    }
+}
 
 #[derive(Clone)]
 struct WiringDiagram {
@@ -257,12 +289,25 @@ impl fmt::Debug for WiringDiagram {
         write!(f, "{:#011b}", self.instructions)
     }
 }
+impl fmt::Display for WiringDiagram {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "(")?;
+        for (i, position) in self.positions.iter().enumerate() {
+            write!(f, "{position}")?;
+            if i != self.positions.len() - 1 {
+                write!(f, ",")?;
+            }
+        }
+        write!(f, ")")?;
+        Ok(())
+    }
+}
 
 #[derive(Debug)]
-struct JoltageRequirment {
+struct JoltageRequirement {
     requirements: Vec<usize>,
 }
-impl JoltageRequirment {
+impl JoltageRequirement {
     fn parse(text: &str) -> Self {
         let filtered_text = text
             .chars()
@@ -290,6 +335,19 @@ impl JoltageRequirment {
                 }
             })
             .collect()
+    }
+}
+impl fmt::Display for JoltageRequirement {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{{")?;
+        for (i, requirements) in self.requirements.iter().enumerate() {
+            write!(f, "{requirements}")?;
+            if i != self.requirements.len() - 1 {
+                write!(f, ",")?;
+            }
+        }
+        write!(f, "}}")?;
+        Ok(())
     }
 }
 
@@ -321,11 +379,11 @@ impl Day<u64> for Day10 {
         let mut part_2_answer = 0;
 
         for (i, machine) in machines.machines.iter().enumerate() {
-            eprintln!("{}/{}\t", i, machines.machines.len());
             let Some(pressed) = machine.minimum_config_joltage() else {
                 panic!()
             };
 
+            eprintln!("{}/{}\t{pressed}\t", i, machines.machines.len());
             part_2_answer += pressed as u64;
         }
 
@@ -334,5 +392,5 @@ impl Day<u64> for Day10 {
 }
 
 fn main() -> std::io::Result<()> {
-    DAY.run(InputType::Example)
+    DAY.run(InputType::UserInput)
 }
