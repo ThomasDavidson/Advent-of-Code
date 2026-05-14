@@ -445,13 +445,24 @@ impl<
         }
     }
 }
-impl<T: fmt::Display> fmt::Display for AOCMatrix<T> {
+impl<
+    T: fmt::Display
+        + std::ops::AddAssign
+        + std::ops::Div<Output = T>
+        + std::ops::SubAssign
+        + std::marker::Copy
+        + std::cmp::PartialOrd
+        + From<i16>,
+> fmt::Display for AOCMatrix<T>
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for (i, row) in self.matrix.iter().enumerate() {
             for (j, value) in row.iter().enumerate() {
                 let str = format!("{}", value);
                 if i == j {
                     write!(f, "{}\t", str.red())?;
+                } else if j == self.ncols() - 1 {
+                    write!(f, "{}\t", str.green())?;
                 } else {
                     write!(f, "{}\t", str)?;
                 }
@@ -473,14 +484,14 @@ impl<T> IndexMut<(usize, usize)> for AOCMatrix<T> {
         &mut self.matrix[col][row]
     }
 }
-fn solve_by_algebra(machine: &Machine) -> u32 {
-    // make matrix
 
+fn solve_by_algebra(machine: &Machine) -> Option<u32> {
+    const DEBUG: bool = true;
     let width = machine.wiring_diagrams.len();
     let height = machine.joltage_requirement.requirements.len();
     if width > height {
         eprintln!("Cannot Complete Yet");
-        return 0;
+        return None;
     }
 
     let mut matrix: Vec<Vec<i16>> = Vec::new();
@@ -498,20 +509,27 @@ fn solve_by_algebra(machine: &Machine) -> u32 {
         row.push(machine.joltage_requirement.requirements[i] as i16);
         matrix.push(row);
     }
+    let matrix = AOCMatrix::new(matrix);
 
-    let mut matrix = AOCMatrix::new(matrix);
-
-    // eprintln!("{}", matrix);
+    matrix_solve(matrix, true)
+}
+fn matrix_solve(mut matrix: AOCMatrix<i16>, debug: bool) -> Option<u32> {
+    let width = matrix.ncols() - 1;
+    let height = matrix.nrows();
 
     // solve area under identity
     for i in 0..matrix.ncols() - 1 {
-        eprintln!("i: {i}, {}", matrix[(i, i)]);
+        if debug {
+            eprintln!("i: {i}, {}", matrix[(i, i)]);
+        }
 
         if matrix[(i, i)].abs() != 1 {
             for j in i..matrix.nrows() {
                 if matrix[(i, j)].abs() == 1 {
                     matrix.swap_rows(i, j);
-                    eprintln!("swap: {j} > {i}\n{matrix}");
+                    if debug {
+                        eprintln!("swap: {j} > {i}\n{matrix}");
+                    }
                     break;
                 } else {
                     let min = &matrix.matrix[j]
@@ -523,7 +541,9 @@ fn solve_by_algebra(machine: &Machine) -> u32 {
                     if matrix.matrix[j].iter().all(|a| *a % *min == 0) && *min != 1 {
                         matrix.div_row(j, *min);
                         matrix.swap_rows(i, j);
-                        eprintln!("divide/swap: {j},{i}, min: {min}\n{matrix}");
+                        if debug {
+                            eprintln!("divide/swap: {j},{i}, min: {min}\n{matrix}");
+                        }
                     }
                 }
             }
@@ -531,14 +551,13 @@ fn solve_by_algebra(machine: &Machine) -> u32 {
 
         if matrix[(i, i)] < 0 {
             matrix.scale_row(i, -1);
-            // eprintln!("mul: {i}\n{}", matrix);
+            if debug {
+                eprintln!("mul: {i}\n{}", matrix);
+            }
         }
 
         if matrix[(i, i)] != 1 {
-            // eprintln!("{matrix_orig}\n");
-            // eprintln!("{matrix}");
-
-            return 0;
+            return None;
         }
 
         for j in i..matrix.nrows() {
@@ -548,12 +567,16 @@ fn solve_by_algebra(machine: &Machine) -> u32 {
 
             while matrix[(i, j)] < 0 {
                 matrix.add_rows(j, i);
-                eprintln!("sub: {i}, {j}\n{}", matrix);
+                if debug {
+                    eprintln!("sub: {i}, {j}\n{}", matrix);
+                }
             }
 
             while matrix[(i, j)] > 0 {
                 matrix.sub_rows(j, i);
-                eprintln!("sub: {i}, {j}\n{}", matrix);
+                if debug {
+                    eprintln!("sub: {i}, {j}\n{}", matrix);
+                }
             }
         }
     }
@@ -563,19 +586,24 @@ fn solve_by_algebra(machine: &Machine) -> u32 {
         for j in 0..i {
             while matrix[(i, j)] > 0 {
                 matrix.sub_rows(j, i);
-                eprintln!("sub: {i},{j}\n{}", matrix);
+                if debug {
+                    eprintln!("sub: {i},{j}\n{}", matrix);
+                }
             }
             while matrix[(i, j)] < 0 {
                 matrix.add_rows(j, i);
-                eprintln!("add: {i},{j}\n{}", matrix);
+                if debug {
+                    eprintln!("add: {i},{j}\n{}", matrix);
+                }
             }
         }
     }
+    if debug {
+        eprintln!("result\n{}", matrix);
+        eprintln!("{:?}", matrix.col(matrix.ncols() - 1));
+    }
 
-    eprintln!("result\n{}", matrix);
-    // eprintln!("{:?}", matrix.col(matrix.ncols() - 1));
-
-    matrix.col(matrix.ncols() - 1).iter().sum::<i16>() as u32
+    Some(matrix.col(matrix.ncols() - 1).iter().sum::<i16>() as u32)
 }
 
 fn nalgebra_sove(machine: &Machine) -> u32 {
@@ -691,8 +719,6 @@ fn guess_button(
         let mut current_guesses = guesses.to_vec();
         let mut new_joltage = joltage.clone();
 
-        new_joltage -= guess;
-        presses += 1;
         if !new_joltage.iter().any(|s| *s < 0f32) {
             if let Some(solution) = solve_matrix(matrix.clone(), new_joltage.clone()) {
                 return Some((solution, presses));
@@ -701,6 +727,8 @@ fn guess_button(
             new_joltage += guess;
             current_guesses.remove(i);
         }
+        new_joltage -= guess;
+        presses += 1;
 
         if let Some(solution) = guess_button(
             matrix.clone(),
@@ -718,20 +746,17 @@ fn solve_matrix(
     matrix: OMatrix<f32, Dyn, Dyn>,
     joltage: OMatrix<f32, Dyn, Dyn>,
 ) -> Option<OMatrix<f32, Dyn, Dyn>> {
-    let solution = if let Some(solution) = validate_solution(matrix.clone().lu().solve(&joltage)) {
-        solution
-    // } else if let Some(solution) = validate_solution(matrix.clone().full_piv_lu().solve(&joltage)) {
-    //     solution
-    // } else if let Some(solution) = validate_solution(matrix.clone().qr().solve(&joltage)) {
-    //     solution
-    } else {
-        return None;
-    };
-    if solution.iter().any(|s| *s < 0f32 || s.rem(1f32) != 0f32) {
-        None
-    } else {
-        Some(solution)
-    }
+    let solution =
+        if let Some(solution) = validate_solution(matrix.clone().full_piv_lu().solve(&joltage)) {
+            solution
+        } else if let Some(solution) = validate_solution(matrix.clone().lu().solve(&joltage)) {
+            solution
+        } else if let Some(solution) = validate_solution(matrix.clone().qr().solve(&joltage)) {
+            solution
+        } else {
+            return None;
+        };
+    Some(solution)
 }
 fn validate_solution(solution: Option<OMatrix<f32, Dyn, Dyn>>) -> Option<OMatrix<f32, Dyn, Dyn>> {
     let solution = solution?;
@@ -767,18 +792,24 @@ impl Day<u64> for Day10 {
         let mut part_2_answer = 0;
         let mut completed = 0;
 
-        for (i, machine) in machines.machines.iter().enumerate() {
-            let machine_result = nalgebra_sove(machine) as u64;
-            eprintln!("{i}/{}: {machine_result}", machines.machines.len());
-            if machine_result != 0 {
+        for (i, machine) in machines.machines[0..1].iter().enumerate() {
+            let machine_result = solve_by_algebra(machine);
+
+            eprintln!(
+                "{}/{}: {machine_result:?}\n\n\n",
+                i,
+                machines.machines.len() - 1
+            );
+
+            if let Some(count) = machine_result {
                 completed += 1;
+                part_2_answer += count as u64;
             }
-            part_2_answer += machine_result;
         }
         eprintln!("Completed: {completed}/{}", machines.machines.len());
         part_2_answer
     }
 }
 fn main() -> std::io::Result<()> {
-    DAY.run(InputType::UserInput)
+    DAY.run(InputType::Example)
 }
