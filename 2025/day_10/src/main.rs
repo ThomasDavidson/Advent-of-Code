@@ -210,6 +210,27 @@ impl Machine {
 
         minimum
     }
+    fn test_button_presses(&self, button_presses: &[usize]) -> ButtonPressResult {
+        let mut state = vec![0; self.joltage_requirement.requirements.len()];
+
+        for (i, press) in button_presses.iter().enumerate() {
+            let button = self.wiring_diagrams.get(i);
+            // eprintln!("{button}");
+            for pos in &button.positions {
+                state[*pos] += press
+            }
+        }
+
+        let joltage_req = &self.joltage_requirement.requirements;
+        for (state, joltage) in state.iter().zip(joltage_req.iter()) {
+            if state < joltage {
+                return ButtonPressResult::Under;
+            } else if state > joltage {
+                return ButtonPressResult::Over;
+            }
+        }
+        ButtonPressResult::Equal
+    }
 }
 impl fmt::Debug for Machine {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -219,6 +240,11 @@ impl fmt::Debug for Machine {
 
         Ok(())
     }
+}
+enum ButtonPressResult {
+    Equal,
+    Over,
+    Under,
 }
 
 struct IndicatorDiagram {
@@ -388,7 +414,9 @@ impl fmt::Display for JoltageRequirement {
         Ok(())
     }
 }
+#[derive(Clone)]
 struct AOCMatrix<T> {
+    positions: Vec<usize>,
     matrix: Vec<Vec<T>>,
 }
 impl<
@@ -397,23 +425,19 @@ impl<
         + std::ops::AddAssign
         + std::cmp::PartialOrd<T>
         + From<i16>
-        + std::ops::Div<Output = T>,
+        + std::ops::Div<Output = T>
+        + num_traits::Signed
+        + Ord
+        + std::fmt::Display
+        + std::fmt::Debug
+        + std::ops::MulAssign,
 > AOCMatrix<T>
 {
-    fn new(matrix: Vec<Vec<T>>) -> Self {
-        Self { matrix }
-    }
     fn col(&self, index: usize) -> Vec<T> {
         (0..self.nrows()).map(|i| self.matrix[i][index]).collect()
     }
-    fn nrows(&self) -> usize {
-        self.matrix.len()
-    }
-    fn ncols(&self) -> usize {
-        self.matrix[0].len()
-    }
-    fn swap_rows(&mut self, row1: usize, row2: usize) {
-        self.matrix.swap(row1, row2);
+    fn row(&self, index: usize) -> Vec<T> {
+        self.matrix[index].clone()
     }
     fn sub_rows(&mut self, lhs: usize, rhs: usize) {
         if lhs == rhs {
@@ -430,6 +454,18 @@ impl<
             self[(i, lhs)] += val;
         }
     }
+    fn sub_cols(&mut self, lhs: usize, rhs: usize) {
+        for i in 0..self.nrows() {
+            let val = self[(rhs, i)];
+            self[(lhs, i)] -= val;
+        }
+    }
+    fn add_cols(&mut self, lhs: usize, rhs: usize) {
+        for i in 0..self.nrows() {
+            let val = self[(rhs, i)];
+            self[(lhs, i)] += val;
+        }
+    }
 
     fn scale_row(&mut self, row: usize, scalar: T)
     where
@@ -439,30 +475,152 @@ impl<
             *v *= scalar;
         }
     }
+    fn scale_col(&mut self, index: usize, scalar: T)
+    where
+        T: MulAssign<T>,
+    {
+        for i in 0..self.nrows() {
+            self[(index, i)] *= scalar;
+        }
+    }
     fn div_row(&mut self, row: usize, scalar: T) {
         for v in self.matrix[row].iter_mut() {
             *v = *v / scalar;
         }
     }
+    fn rotate_row(&mut self) {
+        self.matrix.rotate_left(1);
+    }
+    fn min_row(&self, index: usize) -> Option<&T> {
+        self.matrix[index]
+            .iter()
+            .filter(|a| **a != 0.into())
+            .min_by(|a, b| a.abs().cmp(&b.abs()))
+    }
+    fn validate_solution(&self) -> bool {
+        let last_column = self.ncols() - 1;
+        self.matrix[0..self.solution_area()]
+            .iter()
+            .all(|s| s[last_column] >= 0.into())
+    }
+
+    fn remove_empty_rows(&mut self) {
+        // filter out empty
+        let empty = self
+            .matrix
+            .iter()
+            .enumerate()
+            .filter(|(i, row)| row.iter().all(|v| *v == 0.into()))
+            .map(|(i, _)| i)
+            .collect::<Vec<_>>();
+        for i in empty.into_iter().rev() {
+            self.remove_row(i);
+        }
+    }
+    fn l(&mut self) -> bool {
+        let matrix = self;
+        let solve_area = matrix.solution_area();
+
+        for i in 0..solve_area {
+            if matrix[(i, i)] == 0.into() {
+                for j in i..solve_area {
+                    if matrix[(i, j)] != 0.into() {
+                        matrix.swap_rows(i, j);
+                        break;
+                    }
+                    if matrix[(j, i)] != 0.into() {
+                        matrix.swap_cols(i, j);
+                        break;
+                    }
+                }
+            }
+            if matrix[(i, i)] == 0.into() {
+                continue;
+            }
+
+            if matrix[(i, i)] < 0.into() {
+                matrix.scale_row(i, (-1).into());
+            }
+            for j in i..matrix.nrows() {
+                if i == j {
+                    continue;
+                }
+
+                while matrix[(i, j)] < 0.into() {
+                    matrix.add_rows(j, i);
+                }
+
+                while matrix[(i, j)] > 0.into() {
+                    matrix.sub_rows(j, i);
+                }
+            }
+            // eprintln!("{matrix}");
+        }
+        true
+    }
+    fn u(&mut self) {
+        for i in (0..self.solution_area()).rev() {
+            if self[(i, i)] == 0.into() {
+                continue;
+            }
+
+            for j in 0..i {
+                while self[(i, j)] > 0.into() {
+                    self.sub_rows(j, i);
+                }
+                while self[(i, j)] < 0.into() {
+                    self.add_rows(j, i);
+                }
+            }
+        }
+    }
 }
-impl<
-    T: fmt::Display
-        + std::ops::AddAssign
-        + std::ops::Div<Output = T>
-        + std::ops::SubAssign
-        + std::marker::Copy
-        + std::cmp::PartialOrd
-        + From<i16>,
-> fmt::Display for AOCMatrix<T>
-{
+impl<T> AOCMatrix<T> {
+    fn new(matrix: Vec<Vec<T>>) -> Self {
+        let positions = matrix[0].iter().enumerate().map(|(i, _)| i).collect();
+        Self { matrix, positions }
+    }
+    fn swap_rows(&mut self, row1: usize, row2: usize) {
+        self.matrix.swap(row1, row2);
+    }
+    fn swap_cols(&mut self, col1: usize, col2: usize) {
+        self.positions.swap(col1, col2);
+        for row in self.matrix.iter_mut() {
+            row.swap(col1, col2);
+        }
+    }
+    fn nrows(&self) -> usize {
+        self.matrix.len()
+    }
+    fn ncols(&self) -> usize {
+        self.matrix[0].len()
+    }
+    fn remove_row(&mut self, index: usize) {
+        self.matrix.remove(index);
+    }
+    fn remove_col(&mut self, index: usize) {
+        self.positions.remove(index);
+        for row in self.matrix.iter_mut() {
+            row.remove(index);
+        }
+    }
+    fn solution_area(&self) -> usize {
+        self.nrows().min(self.ncols() - 1)
+    }
+}
+impl<T: fmt::Display> fmt::Display for AOCMatrix<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let solve_area = self.solution_area();
+
         for (i, row) in self.matrix.iter().enumerate() {
             for (j, value) in row.iter().enumerate() {
                 let str = format!("{}", value);
-                if i == j {
-                    write!(f, "{}\t", str.red())?;
-                } else if j == self.ncols() - 1 {
+                if j == self.ncols() - 1 {
                     write!(f, "{}\t", str.green())?;
+                } else if i == j {
+                    write!(f, "{}\t", str.red())?;
+                } else if solve_area > j && solve_area > i {
+                    write!(f, "{}\t", str.cyan())?;
                 } else {
                     write!(f, "{}\t", str)?;
                 }
@@ -489,7 +647,7 @@ fn solve_by_algebra(machine: &Machine) -> Option<u32> {
     const DEBUG: bool = true;
     let width = machine.wiring_diagrams.len();
     let height = machine.joltage_requirement.requirements.len();
-    if width > height {
+    if width != height {
         eprintln!("Cannot Complete Yet");
         return None;
     }
@@ -511,92 +669,22 @@ fn solve_by_algebra(machine: &Machine) -> Option<u32> {
     }
     let matrix = AOCMatrix::new(matrix);
 
-    matrix_solve(matrix, true)
+    matrix_solve(matrix.clone(), &machine, false)
 }
-fn matrix_solve(mut matrix: AOCMatrix<i16>, debug: bool) -> Option<u32> {
-    let width = matrix.ncols() - 1;
-    let height = matrix.nrows();
+fn matrix_solve(mut matrix: AOCMatrix<i16>, machine: &Machine, debug: bool) -> Option<u32> {
+    if debug {
+        eprintln!("Solve:\n{matrix}");
+    }
 
-    // solve area under identity
-    for i in 0..matrix.ncols() - 1 {
-        if debug {
-            eprintln!("i: {i}, {}", matrix[(i, i)]);
-        }
-
-        if matrix[(i, i)].abs() != 1 {
-            for j in i..matrix.nrows() {
-                if matrix[(i, j)].abs() == 1 {
-                    matrix.swap_rows(i, j);
-                    if debug {
-                        eprintln!("swap: {j} > {i}\n{matrix}");
-                    }
-                    break;
-                } else {
-                    let min = &matrix.matrix[j]
-                        .iter()
-                        .filter(|a| **a != 0)
-                        .min_by(|a, b| a.abs().cmp(&b.abs()))
-                        .unwrap_or(&1)
-                        .clone();
-                    if matrix.matrix[j].iter().all(|a| *a % *min == 0) && *min != 1 {
-                        matrix.div_row(j, *min);
-                        matrix.swap_rows(i, j);
-                        if debug {
-                            eprintln!("divide/swap: {j},{i}, min: {min}\n{matrix}");
-                        }
-                    }
-                }
-            }
-        }
-
-        if matrix[(i, i)] < 0 {
-            matrix.scale_row(i, -1);
-            if debug {
-                eprintln!("mul: {i}\n{}", matrix);
-            }
-        }
-
-        if matrix[(i, i)] != 1 {
-            return None;
-        }
-
-        for j in i..matrix.nrows() {
-            if i == j {
-                continue;
-            }
-
-            while matrix[(i, j)] < 0 {
-                matrix.add_rows(j, i);
-                if debug {
-                    eprintln!("sub: {i}, {j}\n{}", matrix);
-                }
-            }
-
-            while matrix[(i, j)] > 0 {
-                matrix.sub_rows(j, i);
-                if debug {
-                    eprintln!("sub: {i}, {j}\n{}", matrix);
-                }
-            }
-        }
+    if !matrix.l() {
+        return None;
     }
 
     // solve area above identity
-    for i in (0..matrix.ncols() - 1).rev() {
-        for j in 0..i {
-            while matrix[(i, j)] > 0 {
-                matrix.sub_rows(j, i);
-                if debug {
-                    eprintln!("sub: {i},{j}\n{}", matrix);
-                }
-            }
-            while matrix[(i, j)] < 0 {
-                matrix.add_rows(j, i);
-                if debug {
-                    eprintln!("add: {i},{j}\n{}", matrix);
-                }
-            }
-        }
+    matrix.u();
+
+    if !matrix.validate_solution() {
+        return None;
     }
     if debug {
         eprintln!("result\n{}", matrix);
@@ -792,14 +880,10 @@ impl Day<u64> for Day10 {
         let mut part_2_answer = 0;
         let mut completed = 0;
 
-        for (i, machine) in machines.machines[0..1].iter().enumerate() {
+        for (i, machine) in machines.machines.iter().enumerate() {
             let machine_result = solve_by_algebra(machine);
 
-            eprintln!(
-                "{}/{}: {machine_result:?}\n\n\n",
-                i,
-                machines.machines.len() - 1
-            );
+            eprintln!("{}/{}: {machine_result:?}", i, machines.machines.len() - 1);
 
             if let Some(count) = machine_result {
                 completed += 1;
@@ -811,5 +895,5 @@ impl Day<u64> for Day10 {
     }
 }
 fn main() -> std::io::Result<()> {
-    DAY.run(InputType::Example)
+    DAY.run(InputType::UserInput)
 }
