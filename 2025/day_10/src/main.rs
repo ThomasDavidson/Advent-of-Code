@@ -752,9 +752,16 @@ fn solve_by_algebra(machine: &Machine) -> Option<u32> {
     }
     let matrix = AOCMatrix::new(matrix);
 
-    matrix_solve(matrix.clone(), &machine, false)
+    let mut button_count: Vec<u32> = vec![0; width];
+
+    matrix_solve(matrix.clone(), &mut button_count, &machine, DEBUG)
 }
-fn matrix_solve(mut matrix: AOCMatrix<i16>, machine: &Machine, debug: bool) -> Option<u32> {
+fn matrix_solve(
+    mut matrix: AOCMatrix<i16>,
+    button_count: &mut [u32],
+    machine: &Machine,
+    debug: bool,
+) -> Option<u32> {
     if debug {
         eprintln!("Solve:\n{matrix}");
     }
@@ -762,19 +769,76 @@ fn matrix_solve(mut matrix: AOCMatrix<i16>, machine: &Machine, debug: bool) -> O
     if !matrix.l() {
         return None;
     }
-
+    if debug {
+        eprintln!("L:\n{matrix}");
+    }
     // solve area above identity
     matrix.u();
+    if debug {
+        eprintln!("U:\n{matrix}");
+    }
 
+    let mut valid: bool = true;
+    for i in 0..matrix.nrows() {
+        let solve = matrix.solve_row(i);
+        if debug {
+            eprintln!("\tSolve: {i}: {:?}", matrix.solve_row(i));
+        }
+        if let Some((relative_button_pos, button_value)) = solve {
+            button_count[relative_button_pos] = button_value as u32;
+        } else {
+            valid = false;
+        }
+    }
     if !matrix.validate_solution() {
+        valid = false;
+    }
+
+    match machine.test_button_presses(&button_count) {
+        ButtonPressResult::Equal => return Some(button_count.iter().sum::<u32>()),
+        ButtonPressResult::Over => return None,
+        ButtonPressResult::Under => valid = false,
+    }
+
+    if !valid {
+        let unsolved_row = matrix.find_identity_error_column()?;
+        if debug {
+            eprintln!("Unsolved row: {unsolved_row}");
+        }
+
+        for i in 0..10 {
+            eprintln!("Guess {unsolved_row}: {i}");
+
+            let mut recurse_matrix = matrix.clone();
+            let mut recurse_button_count = button_count.to_vec();
+            recurse_button_count[unsolved_row] += i;
+            guess_row(&mut recurse_matrix, unsolved_row, i);
+
+            match machine.test_button_presses(&recurse_button_count) {
+                ButtonPressResult::Equal => return Some(recurse_button_count.iter().sum::<u32>()),
+                ButtonPressResult::Over => break,
+                ButtonPressResult::Under => (),
+            }
+
+            if let Some(solution) = matrix_solve(recurse_matrix, button_count, machine, debug) {
+                return Some(solution);
+            }
+        }
+
         return None;
     }
     if debug {
         eprintln!("result\n{}", matrix);
         eprintln!("{:?}", matrix.col(matrix.ncols() - 1));
     }
+    eprintln!("button Count: {:?}", button_count);
 
-    Some(matrix.col(matrix.ncols() - 1).iter().sum::<i16>() as u32)
+    Some(button_count.iter().sum::<u32>())
+}
+fn guess_row(matrix: &mut AOCMatrix<i16>, row: usize, guess: u32) {
+    matrix.scale_col(row, guess as i16);
+    matrix.sub_cols(matrix.ncols() - 1, row);
+    matrix.remove_col(row);
 }
 
 fn nalgebra_sove(machine: &Machine) -> u32 {
