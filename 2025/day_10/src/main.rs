@@ -588,6 +588,73 @@ impl<
             }
         }
     }
+    fn is_identity(&self) -> bool {
+        for y in 0..self.solution_area() {
+            for x in 0..(self.solution_area() - 1) {
+                if x == y && self[(x, y)] == 1.into() {
+                    continue;
+                } else if self[(x, y)] == 0.into() {
+                    continue;
+                }
+                return false;
+            }
+        }
+        true
+    }
+    fn find_identity_error_column(&self) -> Option<usize> {
+        for y in 0..self.solution_area() {
+            for x in 0..(self.ncols() - 1) {
+                if x == y && self[(x, y)] == 1.into() {
+                    continue;
+                } else if self[(x, y)] == 0.into() {
+                    continue;
+                }
+                return Some(x);
+            }
+        }
+        None
+    }
+    fn solve_row(&mut self, index: usize) -> Option<(usize, i16)>
+    where
+        i16: From<T>,
+    {
+        let row = self.row(index);
+
+        if row.iter().all(|v| *v == 0.into()) {
+            return Some((index, 0));
+        }
+
+        if row[0..(row.len() - 1)]
+            .iter()
+            .filter(|v| **v == 1.into())
+            .count()
+            != 1
+        {
+            return None;
+        }
+        if row.len() < 2 {
+            return None;
+        }
+        if row[0..(row.len() - 1)]
+            .iter()
+            .filter(|v| **v == 0.into())
+            .count()
+            != row.len() - 2
+        {
+            return None;
+        }
+        let button_value: i16 = row[row.len() - 1].into();
+
+        if button_value < 0 {
+            return None;
+        }
+
+        // set first answer
+        let button_pos = row.iter().position(|v| *v == 1.into()).unwrap();
+        let relative_button_pos = self.positions[button_pos];
+
+        Some((relative_button_pos, button_value))
+    }
 }
 impl<T> AOCMatrix<T> {
     fn new(matrix: Vec<Vec<T>>) -> Self {
