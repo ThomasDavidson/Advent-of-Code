@@ -734,10 +734,6 @@ fn solve_by_algebra(machine: &Machine) -> Option<u32> {
     const DEBUG: bool = true;
     let width = machine.wiring_diagrams.len();
     let height = machine.joltage_requirement.requirements.len();
-    if width != height {
-        eprintln!("Cannot Complete Yet");
-        return None;
-    }
 
     let mut matrix: Vec<Vec<i16>> = Vec::new();
 
