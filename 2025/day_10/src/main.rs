@@ -693,6 +693,12 @@ impl<T: fmt::Display> fmt::Display for AOCMatrix<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let solve_area = self.solution_area();
 
+        for value in &self.positions {
+            let str = format!("{}", value);
+            write!(f, "{}\t", str.purple())?;
+        }
+        writeln!(f)?;
+
         for (i, row) in self.matrix.iter().enumerate() {
             for (j, value) in row.iter().enumerate() {
                 let str = format!("{}", value);
