@@ -224,7 +224,7 @@ impl Machine {
 
         minimum
     }
-    fn test_button_presses(&self, button_presses: &[usize]) -> ButtonPressResult {
+    fn test_button_presses(&self, button_presses: &[u32]) -> ButtonPressResult {
         let mut state = vec![0; self.joltage_requirement.requirements.len()];
 
         for (i, press) in button_presses.iter().enumerate() {
@@ -237,9 +237,9 @@ impl Machine {
 
         let joltage_req = &self.joltage_requirement.requirements;
         for (state, joltage) in state.iter().zip(joltage_req.iter()) {
-            if state < joltage {
+            if *state < *joltage as u32 {
                 return ButtonPressResult::Under;
-            } else if state > joltage {
+            } else if *state > *joltage as u32 {
                 return ButtonPressResult::Over;
             }
         }
