@@ -579,10 +579,10 @@ impl<
             }
 
             for j in 0..i {
-                while self[(i, j)] > 0.into() {
+                while self[(i, i)] * self[(i, j)] > 0.into() {
                     self.sub_rows(j, i);
                 }
-                while self[(i, j)] < 0.into() {
+                while self[(i, i)] * self[(i, j)] < 0.into() {
                     self.add_rows(j, i);
                 }
             }
