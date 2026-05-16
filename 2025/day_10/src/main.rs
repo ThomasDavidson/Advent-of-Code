@@ -36,6 +36,20 @@ impl Machines {
         Self { machines }
     }
 }
+impl Index<usize> for Machines {
+    type Output = Machine;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.machines[index]
+    }
+}
+impl IntoIterator for Machines {
+    type Item = Machine;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.machines.into_iter()
+    }
+}
 
 struct Machine {
     indicator_diagram: IndicatorDiagram,
