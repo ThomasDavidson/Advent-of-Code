@@ -2,6 +2,7 @@ use colored::Colorize;
 use itertools::Itertools;
 use library::input::{Day, InputType};
 use nalgebra::{DMatrix, Dyn, OMatrix};
+use num_traits::{One, Zero};
 use std::collections::VecDeque;
 use std::fmt;
 use std::fmt::Formatter;
@@ -600,23 +601,52 @@ impl<
         let solve_area = matrix.solution_area();
 
         for i in 0..solve_area {
-            if matrix[(i, i)] == 0.into() {
-                for j in i..solve_area {
-                    if matrix[(i, j)].abs() == 1.into() {
+            if matrix[(i, i)].is_zero() {
+                for j in i..matrix.nrows() {
+                    if matrix[(i, j)].abs().is_one() {
                         matrix.swap_rows(i, j);
                         break;
                     }
-                    if matrix[(j, i)] != 0.into() {
+                }
+            }
+            if !matrix[(i, i)].abs().is_one() {
+                for j in i..matrix.ncols() - 1 {
+                    if matrix[(j, i)].abs().is_one() {
                         matrix.swap_cols(i, j);
                         break;
                     }
                 }
             }
-            if matrix[(i, i)] == 0.into() {
-                continue;
+            if !matrix[(i, i)].abs().is_one() {
+                for j in i..matrix.nrows() {
+                    if !matrix[(i, j)].abs().is_zero() {
+                        matrix.swap_rows(i, j);
+                        break;
+                    }
+                }
+            }
+            if !matrix[(i, i)].abs().is_one() {
+                for j in i..matrix.ncols() - 1 {
+                    if !matrix[(j, i)].abs().is_zero() {
+                        matrix.swap_cols(i, j);
+                        break;
+                    }
+                }
             }
 
-            if matrix[(i, i)] < 0.into() {
+            if matrix[(i, i)].is_zero() {
+                continue;
+            }
+            if !matrix[(i, i)].is_one() {
+                let Some(min_row) = matrix.min_row(i) else {
+                    continue;
+                };
+                if matrix.row(i).iter().all(|v| *v % *min_row == 0.into()) {
+                    matrix.div_row(i, *min_row);
+                }
+            }
+
+            if !matrix[(i, i)].is_positive() {
                 matrix.scale_row(i, (-1).into());
             }
             for j in i..matrix.nrows() {
@@ -624,15 +654,19 @@ impl<
                     continue;
                 }
 
-                while matrix[(i, j)] < 0.into() {
+                while !matrix[(i, j)].is_zero()
+                    && !(matrix[(i, j)].is_positive() && matrix[(i, i)].is_positive())
+                {
                     matrix.add_rows(j, i);
                 }
 
-                while matrix[(i, j)] > 0.into() {
+                while !matrix[(i, j)].is_zero()
+                    && matrix[(i, j)].is_positive()
+                    && matrix[(i, i)].is_positive()
+                {
                     matrix.sub_rows(j, i);
                 }
             }
-            // eprintln!("{matrix}");
         }
         true
     }
@@ -826,6 +860,8 @@ fn solve_by_algebra(machine: &Machine) -> Option<u32> {
 
     let mut matrix = matrix.clone();
 
+    let mut min_answer = None;
+
     for _ in 0..height {
         matrix.rotate_row();
         if let Some(ButtonPressResult::Equal(button_count)) = matrix_solve(
@@ -836,11 +872,11 @@ fn solve_by_algebra(machine: &Machine) -> Option<u32> {
             DEBUG,
         ) {
             let answer = button_count.iter().sum::<u32>();
-            return Some(answer);
+            min_answer = Some(answer.min(min_answer.unwrap_or(u32::MAX)));
         }
     }
 
-    None
+    min_answer
 }
 fn matrix_solve(
     mut matrix: AOCMatrix<i16>,
@@ -866,13 +902,21 @@ fn matrix_solve(
     }
 
     while matrix.ncols() - 1 > matrix.nrows() {
-        let column = (0..matrix.ncols() - 2)
-            .min_by(|a, b| {
-                machine
-                    .max_presses(matrix.positions[*a])
-                    .cmp(&machine.max_presses(matrix.positions[*b]))
+        let max_presses: Vec<u32> = (0..matrix.ncols() - 1)
+            .map(|col| machine.max_presses(matrix.positions[col]))
+            .collect();
+
+        let column = max_presses
+            .iter()
+            .enumerate()
+            .filter(|(col, _)| {
+                let column = matrix.col(*col);
+                !(column.iter().filter(|v| v.is_one()).count() == 1
+                    && column.iter().filter(|v| v.is_zero()).count() == matrix.nrows() - 1)
             })
-            .unwrap();
+            .min_by_key(|(_, val)| *val)
+            .unwrap()
+            .0;
 
         let button = matrix.positions[column];
         let min_presses = matrix.min_presses(column) as u32;
