@@ -587,7 +587,7 @@ impl<
             .matrix
             .iter()
             .enumerate()
-            .filter(|(i, row)| row.iter().all(|v| *v == 0.into()))
+            .filter(|(_, row)| row.iter().all(|v| *v == 0.into()))
             .map(|(i, _)| i)
             .collect::<Vec<_>>();
         for i in empty.into_iter().rev() {
@@ -601,7 +601,7 @@ impl<
         for i in 0..solve_area {
             if matrix[(i, i)] == 0.into() {
                 for j in i..solve_area {
-                    if matrix[(i, j)] != 0.into() {
+                    if matrix[(i, j)].abs() == 1.into() {
                         matrix.swap_rows(i, j);
                         break;
                     }
@@ -677,19 +677,19 @@ impl<
         }
         None
     }
-    fn solve_row(&mut self, index: usize) -> Option<(usize, i16)>
+    fn solve_row(&self, row_idx: usize) -> Option<(usize, i16, i16)>
     where
         i16: From<T>,
     {
-        let row = self.row(index);
+        let row = self.row(row_idx);
 
         if row.iter().all(|v| *v == 0.into()) {
-            return Some((index, 0));
+            return None;
         }
 
         if row[0..(row.len() - 1)]
             .iter()
-            .filter(|v| **v == 1.into())
+            .filter(|v| **v != 0.into())
             .count()
             != 1
         {
@@ -708,15 +708,12 @@ impl<
         }
         let button_value: i16 = row[row.len() - 1].into();
 
-        if button_value < 0 {
-            return None;
-        }
-
         // set first answer
-        let button_pos = row.iter().position(|v| *v == 1.into()).unwrap();
+        let button_pos = row.iter().position(|v| *v != 0.into()).unwrap();
+        let button_denominator = row[button_pos].into();
         let relative_button_pos = self.positions[button_pos];
 
-        Some((relative_button_pos, button_value))
+        Some((relative_button_pos, button_value, button_denominator))
     }
 }
 impl<T> AOCMatrix<T> {
