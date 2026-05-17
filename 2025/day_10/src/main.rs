@@ -440,6 +440,57 @@ impl fmt::Display for JoltageRequirement {
         Ok(())
     }
 }
+
+#[derive(Debug, Clone)]
+struct ButtonCount {
+    button_count: Vec<(u32, bool)>,
+}
+impl ButtonCount {
+    fn new(size: usize) -> Self {
+        Self {
+            button_count: vec![(0, false); size],
+        }
+    }
+    fn get_count(&self) -> Vec<u32> {
+        self.button_count.iter().map(|(count, _)| *count).collect()
+    }
+    fn len(&self) -> usize {
+        self.button_count.len()
+    }
+    fn set(&mut self, new_values: Vec<u32>) {
+        for (set, new_value) in self.button_count.iter_mut().zip(new_values.iter()) {
+            *set = (*new_value, true)
+        }
+    }
+}
+impl Index<usize> for ButtonCount {
+    type Output = u32;
+
+    fn index(&self, index: usize) -> &u32 {
+        let (count, _) = &self.button_count[index];
+        count
+    }
+}
+impl IndexMut<usize> for ButtonCount {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        let (count, set) = &mut self.button_count[index];
+        *set = true;
+        count
+    }
+}
+impl fmt::Display for ButtonCount {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for (count, set) in &self.button_count {
+            if *set {
+                write!(f, "{count:?},\t")?;
+            } else {
+                write!(f, "None,\t")?;
+            }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone)]
 struct AOCMatrix<T> {
     positions: Vec<usize>,
