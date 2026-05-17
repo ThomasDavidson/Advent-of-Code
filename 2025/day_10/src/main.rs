@@ -721,6 +721,24 @@ impl<
         }
         None
     }
+    fn min_presses(&self, column: usize) -> T {
+        self.col(column)
+            .iter()
+            .enumerate()
+            .zip(self.col(self.ncols() - 1).iter())
+            .filter(|((_, col), last)| **last != 0.into() && **col != 0.into())
+            .filter(|((_, col), last)| **last % **col == 0.into())
+            .filter(|((y, _), last)| {
+                self.row(*y)
+                    .iter()
+                    .filter(|col| col.is_positive() && last.is_positive())
+                    .count()
+                    == 1
+            })
+            .map(|((_, col), last)| *last / *col)
+            .min()
+            .unwrap_or(0.into())
+    }
     fn solve_row(&self, row_idx: usize) -> Option<(usize, i16, i16)>
     where
         i16: From<T>,
@@ -844,7 +862,7 @@ impl<T> IndexMut<(usize, usize)> for AOCMatrix<T> {
 }
 
 fn solve_by_algebra(machine: &Machine) -> Option<u32> {
-    const DEBUG: bool = true;
+    const DEBUG: bool = false;
     let width = machine.wiring_diagrams.len();
     let height = machine.joltage_requirement.requirements.len();
 
@@ -871,8 +889,8 @@ fn solve_by_algebra(machine: &Machine) -> Option<u32> {
 
     let mut min_answer = None;
 
-    for _ in 0..height {
-        matrix.rotate_row();
+    for _ in 0..width {
+        matrix.rotate_col();
         if let Some(ButtonPressResult::Equal(button_count)) = matrix_solve(
             matrix.clone(),
             button_count.clone(),
@@ -930,6 +948,9 @@ fn matrix_solve(
         let button = matrix.positions[column];
         let min_presses = matrix.min_presses(column) as u32;
 
+        let mut min_press: Option<u32> = None;
+        let mut min_button_count = button_count.clone();
+
         for i in min_presses..=machine.max_presses(button) {
             let mut matrix = matrix.clone();
             let mut button_count = button_count.clone();
@@ -941,13 +962,25 @@ fn matrix_solve(
 
             let result = matrix_solve(matrix, button_count.clone(), machine, min_answer, debug);
 
-            if let Some(ButtonPressResult::Equal(_)) = &result {
-                return result;
+            if let Some(ButtonPressResult::Equal(button_count)) = result {
+                let answer = button_count.iter().sum::<u32>();
+                if debug {
+                    eprintln!("New answer: {answer}");
+                }
+
+                if answer < min_press.unwrap_or(u32::MAX) {
+                    min_press = Some(answer);
+                    min_button_count.set(button_count);
+                }
             } else if debug {
                 eprintln!("PressResult: {result:?}");
             }
         }
-        return None;
+        return if min_press.is_some() {
+            Some(ButtonPressResult::Equal(min_button_count.get_count()))
+        } else {
+            None
+        };
     }
 
     let mut valid: bool = true;
@@ -983,16 +1016,13 @@ fn matrix_solve(
         let mut min_press: Option<u32> = None;
         let mut min_button_count = button_count.clone();
 
-        let mut recurse_matrix;
-        let mut recurse_button_count;
-
         let min_presses = matrix.min_presses(unsolved_row) as u32;
 
         for i in min_presses..machine.max_presses(button) {
-            recurse_matrix = matrix.clone();
-            recurse_button_count = button_count.clone();
+            let mut matrix = matrix.clone();
+            let mut button_count = button_count.clone();
 
-            recurse_matrix.guess_col(&mut recurse_button_count, unsolved_row, i);
+            matrix.guess_col(&mut button_count, unsolved_row, i);
 
             if debug {
                 eprintln!("Guess B: {button}, G: {i}\n{button_count}\n{matrix}");
@@ -1003,15 +1033,8 @@ fn matrix_solve(
                 _ => (),
             }
 
-            match matrix_solve(
-                recurse_matrix,
-                recurse_button_count,
-                machine,
-                min_answer,
-                debug,
-            ) {
+            match matrix_solve(matrix, button_count, machine, min_answer, debug) {
                 Some(ButtonPressResult::Equal(button_count)) => {
-                    // return Some(ButtonPressResult::Equal(button_count));
                     let answer = button_count.iter().sum::<u32>();
                     if debug {
                         eprintln!("New answer: {answer}");
@@ -1217,7 +1240,7 @@ impl Day<u64> for Day10 {
 
         let mut part_1_answer = 0;
 
-        for machine in &machines.machines {
+        for machine in machines {
             let pressed = machine.config_wiring();
             if pressed == u32::MAX {
                 panic!()
@@ -1233,17 +1256,14 @@ impl Day<u64> for Day10 {
         let mut part_2_answer = 0;
         let mut completed = 0;
 
-        for (i, machine) in machines.machines.iter().enumerate() {
-            let machine_result = solve_by_algebra(machine);
-
-            eprintln!("{}/{}: {machine_result:?}", i, machines.machines.len() - 1);
+        for machine in machines {
+            let machine_result = solve_by_algebra(&machine);
 
             if let Some(count) = machine_result {
                 completed += 1;
                 part_2_answer += count as u64;
             }
         }
-        eprintln!("Completed: {completed}/{}", machines.machines.len());
         part_2_answer
     }
 }
