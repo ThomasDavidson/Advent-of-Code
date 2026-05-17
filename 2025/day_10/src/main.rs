@@ -1,32 +1,11 @@
 use colored::Colorize;
-use itertools::Itertools;
 use library::input::{Day, InputType};
-use nalgebra::{DMatrix, Dyn, OMatrix};
-use num_traits::{One, Zero};
+use num_traits::{One, Zero, one, zero};
 use std::collections::VecDeque;
 use std::fmt;
-use std::fmt::Formatter;
-use std::ops::{Index, IndexMut, MulAssign, Rem};
+use std::fmt::{Debug, Formatter};
+use std::ops::{Index, IndexMut, MulAssign};
 use std::slice::Iter;
-
-type Press = u16;
-
-#[derive(PartialOrd, PartialEq, Ord, Eq)]
-struct MachineState {
-    state: Vec<Press>,
-    count: usize,
-}
-impl MachineState {
-    fn init(joltage_size: usize) -> Self {
-        Self {
-            state: vec![0; joltage_size],
-            count: 0,
-        }
-    }
-    fn new(state: Vec<Press>, count: usize) -> Self {
-        Self { state, count }
-    }
-}
 
 struct Machines {
     machines: Vec<Machine>,
@@ -82,65 +61,6 @@ impl Machine {
     fn get_instructions(&self, button: usize) -> u16 {
         self.wiring_diagrams.get(button).instructions
     }
-    // press button until one of the requirements are met
-    fn joltage_button(&self, button: usize, mut state: Vec<Press>) -> (Vec<Press>, usize) {
-        // get button positions
-        let button_positions = &self.wiring_diagrams.get(button).positions;
-
-        // check number of fulfilled requirements
-        let num = self
-            .joltage_requirement
-            .check_requirement(&state[..])
-            .0
-            .len();
-
-        // get difference between current joltage and requirement
-        let remaining = {
-            let mut remaining = state
-                .iter()
-                .zip(self.joltage_requirement.requirements.iter())
-                .map(|(state_press, required)| *required - *state_press as usize)
-                .collect::<Vec<_>>();
-            remaining.sort();
-            remaining.dedup();
-            remaining.len()
-        };
-
-        let mut count = 0;
-
-        loop {
-            count = count + 1;
-            for i in button_positions {
-                state[*i] += 1
-            }
-            let new_num = self
-                .joltage_requirement
-                .check_requirement(&state[..])
-                .0
-                .len();
-
-            let new_remaining = {
-                let mut new_remaining = state
-                    .iter()
-                    .zip(self.joltage_requirement.requirements.iter())
-                    .map(|(state_press, required)| *required - *state_press as usize)
-                    .collect::<Vec<_>>();
-                new_remaining.sort();
-
-                new_remaining.dedup();
-                new_remaining
-            };
-
-            if new_remaining.len() < remaining {
-                break;
-            }
-
-            if new_num != num {
-                break;
-            }
-        }
-        (state, count)
-    }
 
     // get fewest button presses for part 1
     fn config_wiring(&self) -> u32 {
@@ -166,65 +86,6 @@ impl Machine {
         panic!()
     }
 
-    fn minimum_config_joltage(&self) -> Option<u32> {
-        let joltage_size = self.joltage_requirement.requirements.len();
-
-        let mut minimum: Option<u32> = None;
-
-        let mut states: Vec<MachineState> = vec![MachineState::init(joltage_size)];
-
-        let mut max_count = 0;
-        while let Some(machine_state) = states.pop() {
-            max_count = max_count.max(machine_state.count);
-
-            let (satisfied, unsatisfied) = self
-                .joltage_requirement
-                .check_requirement(&machine_state.state[..]);
-
-            let buttons: Vec<usize> = self
-                .wiring_diagrams
-                .iter()
-                .enumerate()
-                .filter_map(|(i, button)| {
-                    if button
-                        .positions
-                        .iter()
-                        .any(|pos| unsatisfied.contains(&(*pos as Press)))
-                        && !button
-                            .positions
-                            .iter()
-                            .any(|pos| satisfied.contains(&(*pos as Press)))
-                    {
-                        Some(i)
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            for button in buttons {
-                let (state, pressed) = self.joltage_button(button, machine_state.state.clone());
-                let count = machine_state.count + pressed;
-                // let mut history = machine_state.history.clone();
-                // history.push((button, pressed));
-                // eprintln!();
-
-                if state
-                    .iter()
-                    .zip(self.joltage_requirement.requirements.iter())
-                    .all(|(a, b)| *a == *b as Press)
-                {
-                    eprintln!("Found one solution");
-                    minimum = Some(minimum.unwrap_or(u32::MAX).min(count as u32));
-                } else if count < minimum.unwrap_or(u32::MAX) as usize {
-                    states.push(MachineState::new(state.clone(), count));
-                    states.sort();
-                    states.dedup();
-                }
-            }
-        }
-
-        minimum
-    }
     fn test_button_presses(&self, button_presses: &[u32]) -> ButtonPressResult {
         let mut state = vec![0; self.joltage_requirement.requirements.len()];
 
@@ -415,19 +276,6 @@ impl JoltageRequirement {
 
         Self { requirements }
     }
-
-    fn check_requirement(&self, state: &[Press]) -> (Vec<Press>, Vec<Press>) {
-        let mut satisfied = Vec::new();
-        let mut unsatisfied = Vec::new();
-        for (i, (state_press, required)) in state.iter().zip(&self.requirements).enumerate() {
-            if *state_press < (*required as Press) && *state_press != (*required as Press) {
-                unsatisfied.push(i as Press)
-            } else {
-                satisfied.push(i as Press);
-            }
-        }
-        (satisfied, unsatisfied)
-    }
 }
 impl fmt::Display for JoltageRequirement {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -502,14 +350,13 @@ impl<
     T: std::ops::SubAssign
         + Copy
         + std::ops::AddAssign
+        + std::ops::MulAssign
+        + Ord
         + std::cmp::PartialOrd<T>
-        + From<i16>
         + std::ops::Div<Output = T>
         + num_traits::Signed
-        + Ord
         + std::fmt::Display
-        + std::fmt::Debug
-        + std::ops::MulAssign,
+        + TryInto<u32>,
 > AOCMatrix<T>
 {
     fn col(&self, index: usize) -> Vec<T> {
@@ -582,14 +429,14 @@ impl<
     fn min_row(&self, index: usize) -> Option<&T> {
         self.matrix[index]
             .iter()
-            .filter(|a| **a != 0.into())
+            .filter(|a| !a.is_zero())
             .min_by(|a, b| a.abs().cmp(&b.abs()))
     }
     fn validate_solution(&self) -> bool {
         let last_column = self.ncols() - 1;
         self.matrix[0..self.solution_area()]
             .iter()
-            .all(|s| s[last_column] >= 0.into())
+            .all(|s| !s[last_column].is_negative())
     }
 
     fn remove_empty_rows(&mut self) {
@@ -598,7 +445,7 @@ impl<
             .matrix
             .iter()
             .enumerate()
-            .filter(|(_, row)| row.iter().all(|v| *v == 0.into()))
+            .filter(|(_, row)| row.iter().all(|v| v.is_zero()))
             .map(|(i, _)| i)
             .collect::<Vec<_>>();
         for i in empty.into_iter().rev() {
@@ -650,21 +497,21 @@ impl<
                 let Some(min_row) = matrix.min_row(i) else {
                     continue;
                 };
-                if matrix.row(i).iter().all(|v| *v % *min_row == 0.into()) {
+                if matrix.row(i).iter().all(|v| (*v % *min_row).is_zero()) {
                     matrix.div_row(i, *min_row);
                 }
             }
 
             if !matrix[(i, i)].is_positive() {
-                matrix.scale_row(i, (-1).into());
+                matrix.scale_row(i, -one::<T>());
             }
             for j in i..matrix.nrows() {
                 if i == j {
                     continue;
                 }
 
-                while !matrix[(i, j)].is_zero()
-                    && !(matrix[(i, j)].is_positive() && matrix[(i, i)].is_positive())
+                while !(matrix[(i, j)].is_zero()
+                    || matrix[(i, j)].is_positive() && matrix[(i, i)].is_positive())
                 {
                     matrix.add_rows(j, i);
                 }
@@ -681,15 +528,21 @@ impl<
     }
     fn u(&mut self) {
         for i in (0..self.solution_area()).rev() {
-            if self[(i, i)] == 0.into() {
+            if self[(i, i)].is_zero() {
                 continue;
             }
 
             for j in 0..i {
-                while self[(i, i)] * self[(i, j)] > 0.into() {
+                while self[(i, i)].is_positive()
+                    && self[(i, j)].is_positive()
+                    && !self[(i, j)].is_zero()
+                {
                     self.sub_rows(j, i);
                 }
-                while self[(i, i)] * self[(i, j)] < 0.into() {
+                while self[(i, i)].is_positive()
+                    && self[(i, j)].is_negative()
+                    && !self[(i, j)].is_zero()
+                {
                     self.add_rows(j, i);
                 }
             }
@@ -698,9 +551,7 @@ impl<
     fn is_identity(&self) -> bool {
         for y in 0..self.solution_area() {
             for x in 0..(self.solution_area() - 1) {
-                if x == y && self[(x, y)] == 1.into() {
-                    continue;
-                } else if self[(x, y)] == 0.into() {
+                if x == y && self[(x, y)].is_one() || self[(x, y)].is_zero() {
                     continue;
                 }
                 return false;
@@ -711,9 +562,7 @@ impl<
     fn find_identity_error_column(&self) -> Option<usize> {
         for y in 0..self.solution_area() {
             for x in 0..(self.ncols() - 1) {
-                if x == y && self[(x, y)] == 1.into() {
-                    continue;
-                } else if self[(x, y)] == 0.into() {
+                if x == y && self[(x, y)].is_one() || self[(x, y)].is_zero() {
                     continue;
                 }
                 return Some(x);
@@ -726,8 +575,8 @@ impl<
             .iter()
             .enumerate()
             .zip(self.col(self.ncols() - 1).iter())
-            .filter(|((_, col), last)| **last != 0.into() && **col != 0.into())
-            .filter(|((_, col), last)| **last % **col == 0.into())
+            .filter(|((_, col), last)| !last.is_zero() && !col.is_zero())
+            .filter(|((_, col), last)| (**last % **col).is_zero())
             .filter(|((y, _), last)| {
                 self.row(*y)
                     .iter()
@@ -737,7 +586,7 @@ impl<
             })
             .map(|((_, col), last)| *last / *col)
             .min()
-            .unwrap_or(0.into())
+            .unwrap_or(zero())
     }
     fn solve_row(&self, row_idx: usize) -> Option<(usize, i16, i16)>
     where
@@ -745,13 +594,13 @@ impl<
     {
         let row = self.row(row_idx);
 
-        if row.iter().all(|v| *v == 0.into()) {
+        if row.iter().all(|v| v.is_zero()) {
             return None;
         }
 
         if row[0..(row.len() - 1)]
             .iter()
-            .filter(|v| **v != 0.into())
+            .filter(|v| !v.is_zero())
             .count()
             != 1
         {
@@ -762,7 +611,7 @@ impl<
         }
         if row[0..(row.len() - 1)]
             .iter()
-            .filter(|v| **v == 0.into())
+            .filter(|v| v.is_zero())
             .count()
             != row.len() - 2
         {
@@ -771,18 +620,21 @@ impl<
         let button_value: i16 = row[row.len() - 1].into();
 
         // set first answer
-        let button_pos = row.iter().position(|v| *v != 0.into()).unwrap();
+        let button_pos = row.iter().position(|v| !v.is_zero()).unwrap();
         let button_denominator = row[button_pos].into();
         let relative_button_pos = self.positions[button_pos];
 
         Some((relative_button_pos, button_value, button_denominator))
     }
-    fn guess_col(&mut self, button_count: &mut ButtonCount, column: usize, guess: u32) {
+    fn guess_col(&mut self, button_count: &mut ButtonCount, column: usize, guess: T)
+    where
+        <T as TryInto<u32>>::Error: Debug,
+    {
         let button = self.positions[column];
 
-        button_count[button] += guess;
+        button_count[button] += guess.try_into().unwrap();
 
-        self.scale_col(column, (guess as i16).into());
+        self.scale_col(column, guess);
         self.sub_cols(self.ncols() - 1, column);
         self.remove_col(column);
     }
@@ -891,13 +743,9 @@ fn solve_by_algebra(machine: &Machine) -> Option<u32> {
 
     for _ in 0..width {
         matrix.rotate_col();
-        if let Some(ButtonPressResult::Equal(button_count)) = matrix_solve(
-            matrix.clone(),
-            button_count.clone(),
-            &machine,
-            &mut 0,
-            DEBUG,
-        ) {
+        if let Some(ButtonPressResult::Equal(button_count)) =
+            matrix_solve(matrix.clone(), button_count.clone(), machine, DEBUG)
+        {
             let answer = button_count.iter().sum::<u32>();
             min_answer = Some(answer.min(min_answer.unwrap_or(u32::MAX)));
         }
@@ -909,7 +757,6 @@ fn matrix_solve(
     mut matrix: AOCMatrix<i16>,
     mut button_count: ButtonCount,
     machine: &Machine,
-    min_answer: &mut u32,
     debug: bool,
 ) -> Option<ButtonPressResult> {
     if debug {
@@ -928,7 +775,7 @@ fn matrix_solve(
         eprintln!("U:\n{matrix}");
     }
 
-    while matrix.ncols() - 1 > matrix.nrows() {
+    if matrix.ncols() - 1 > matrix.nrows() {
         let max_presses: Vec<u32> = (0..matrix.ncols() - 1)
             .map(|col| machine.max_presses(matrix.positions[col]))
             .collect();
@@ -955,12 +802,12 @@ fn matrix_solve(
             let mut matrix = matrix.clone();
             let mut button_count = button_count.clone();
 
-            matrix.guess_col(&mut button_count, column, i);
+            matrix.guess_col(&mut button_count, column, i as i16);
             if debug {
                 eprintln!("Guess B: {button}, G: {i}\n{button_count}\n{matrix}");
             }
 
-            let result = matrix_solve(matrix, button_count.clone(), machine, min_answer, debug);
+            let result = matrix_solve(matrix, button_count.clone(), machine, debug);
 
             if let Some(ButtonPressResult::Equal(button_count)) = result {
                 let answer = button_count.iter().sum::<u32>();
@@ -1003,6 +850,7 @@ fn matrix_solve(
 
     match machine.test_button_presses(&button_count.get_count()) {
         ButtonPressResult::Under => valid = false,
+        ButtonPressResult::Over => return None,
         _ => (),
     }
 
@@ -1022,18 +870,18 @@ fn matrix_solve(
             let mut matrix = matrix.clone();
             let mut button_count = button_count.clone();
 
-            matrix.guess_col(&mut button_count, unsolved_row, i);
+            matrix.guess_col(&mut button_count, unsolved_row, i as i16);
 
             if debug {
                 eprintln!("Guess B: {button}, G: {i}\n{button_count}\n{matrix}");
             }
 
-            match machine.test_button_presses(&button_count.get_count()) {
-                ButtonPressResult::Over => break,
-                _ => (),
+            if let ButtonPressResult::Over = machine.test_button_presses(&button_count.get_count())
+            {
+                break;
             }
 
-            match matrix_solve(matrix, button_count, machine, min_answer, debug) {
+            match matrix_solve(matrix, button_count, machine, debug) {
                 Some(ButtonPressResult::Equal(button_count)) => {
                     let answer = button_count.iter().sum::<u32>();
                     if debug {
@@ -1063,173 +911,10 @@ fn matrix_solve(
     }
     if debug {
         eprintln!("result\n{}", matrix);
-        eprintln!("{:?}", matrix.col(matrix.ncols() - 1));
         eprintln!("button Count: {:?}", button_count);
     }
 
     Some(machine.test_button_presses(&button_count.get_count()))
-}
-
-fn nalgebra_sove(machine: &Machine) -> u32 {
-    let width = machine.wiring_diagrams.len();
-    let height = machine.joltage_requirement.requirements.len();
-
-    let mut matrix: Vec<f32> = Vec::new();
-    for button in machine.wiring_diagrams.iter() {
-        for i in 0..height {
-            if button.positions.contains(&i) {
-                matrix.push(1f32)
-            } else {
-                matrix.push(0f32)
-            }
-        }
-    }
-    let joltage = DMatrix::from_vec(
-        height,
-        1,
-        machine
-            .joltage_requirement
-            .requirements
-            .iter()
-            .map(|joltage| *joltage as f32)
-            .collect(),
-    );
-
-    let matrix = DMatrix::from_vec(height, width, matrix);
-
-    let solution = if width < height {
-        solve_over_prevision(matrix, joltage, height, width)
-    } else if width > height {
-        solve_under_prevision(matrix, joltage, height, width)
-    } else {
-        solve_matrix(matrix, joltage)
-    };
-
-    if let Some(solution) = solution {
-        return solution.iter().sum::<f32>() as u32;
-    };
-
-    eprintln!("Failed to solve");
-    0
-}
-
-fn solve_over_prevision(
-    matrix: OMatrix<f32, Dyn, Dyn>,
-    joltage: OMatrix<f32, Dyn, Dyn>,
-    height: usize,
-    width: usize,
-) -> Option<OMatrix<f32, Dyn, Dyn>> {
-    let remove_amount = height - width;
-
-    let remove_list: Vec<Vec<usize>> = (0..height).combinations(remove_amount).collect();
-    for mut remove in remove_list {
-        let mut matrix = matrix.clone();
-        let mut joltage = joltage.clone();
-
-        remove.sort();
-
-        for i in remove.iter().rev() {
-            matrix = matrix.remove_row(*i);
-            joltage = joltage.remove_row(*i);
-        }
-
-        if let Some(solution) = solve_matrix(matrix, joltage) {
-            return Some(solution);
-        };
-    }
-    None
-}
-
-fn solve_under_prevision(
-    matrix: OMatrix<f32, Dyn, Dyn>,
-    joltage: OMatrix<f32, Dyn, Dyn>,
-    height: usize,
-    width: usize,
-) -> Option<OMatrix<f32, Dyn, Dyn>> {
-    let remove_amount = width - height;
-
-    let remove_list: Vec<Vec<usize>> = (0..height).combinations(remove_amount).collect();
-
-    for mut remove in remove_list {
-        let mut matrix = matrix.clone();
-        let joltage = joltage.clone();
-
-        remove.sort();
-
-        let mut removed_buttons = Vec::new();
-        for i in remove.iter().rev() {
-            let removed = DMatrix::from_columns(&[matrix.column(*i)]);
-            removed_buttons.push(removed);
-            matrix = matrix.remove_column(*i);
-        }
-        if let Some((mut solution, count)) = guess_button(matrix, joltage, &removed_buttons, 0) {
-            solution = solution.insert_row(0, count as f32);
-            return Some(solution);
-        }
-    }
-    None
-}
-fn guess_button(
-    matrix: OMatrix<f32, Dyn, Dyn>,
-    joltage: OMatrix<f32, Dyn, Dyn>,
-    guesses: &[OMatrix<f32, Dyn, Dyn>],
-    mut presses: usize,
-) -> Option<(OMatrix<f32, Dyn, Dyn>, usize)> {
-    if guesses.is_empty() {
-        return None;
-    }
-
-    for (i, guess) in guesses.iter().enumerate() {
-        let mut current_guesses = guesses.to_vec();
-        let mut new_joltage = joltage.clone();
-
-        if !new_joltage.iter().any(|s| *s < 0f32) {
-            if let Some(solution) = solve_matrix(matrix.clone(), new_joltage.clone()) {
-                return Some((solution, presses));
-            }
-        } else {
-            new_joltage += guess;
-            current_guesses.remove(i);
-        }
-        new_joltage -= guess;
-        presses += 1;
-
-        if let Some(solution) = guess_button(
-            matrix.clone(),
-            new_joltage.clone(),
-            &current_guesses,
-            presses,
-        ) {
-            return Some(solution);
-        };
-    }
-    None
-}
-
-fn solve_matrix(
-    matrix: OMatrix<f32, Dyn, Dyn>,
-    joltage: OMatrix<f32, Dyn, Dyn>,
-) -> Option<OMatrix<f32, Dyn, Dyn>> {
-    let solution =
-        if let Some(solution) = validate_solution(matrix.clone().full_piv_lu().solve(&joltage)) {
-            solution
-        } else if let Some(solution) = validate_solution(matrix.clone().lu().solve(&joltage)) {
-            solution
-        } else if let Some(solution) = validate_solution(matrix.clone().qr().solve(&joltage)) {
-            solution
-        } else {
-            return None;
-        };
-    Some(solution)
-}
-fn validate_solution(solution: Option<OMatrix<f32, Dyn, Dyn>>) -> Option<OMatrix<f32, Dyn, Dyn>> {
-    let solution = solution?;
-
-    if solution.iter().any(|s| *s < 0f32 || s.rem(1f32) != 0f32) {
-        None
-    } else {
-        Some(solution)
-    }
 }
 
 struct Day10;
@@ -1254,13 +939,11 @@ impl Day<u64> for Day10 {
         let machines = Machines::parse(input);
 
         let mut part_2_answer = 0;
-        let mut completed = 0;
 
         for machine in machines {
             let machine_result = solve_by_algebra(&machine);
 
             if let Some(count) = machine_result {
-                completed += 1;
                 part_2_answer += count as u64;
             }
         }
