@@ -245,6 +245,18 @@ impl Machine {
         }
         ButtonPressResult::Equal
     }
+    fn max_presses(&self, button: usize) -> u32 {
+        let button = self.wiring_diagrams.get(button);
+
+        let joltage_req = &self.joltage_requirement.requirements;
+
+        button
+            .positions
+            .iter()
+            .map(|pos| joltage_req[*pos] as u32)
+            .min()
+            .unwrap()
+    }
 }
 impl fmt::Debug for Machine {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
