@@ -570,6 +570,15 @@ impl<
     fn rotate_row(&mut self) {
         self.matrix.rotate_left(1);
     }
+    fn rotate_col(&mut self) {
+        let width = self.ncols() - 1;
+        self.positions.rotate_left(1);
+        self.positions.swap(width - 1, width);
+        for row in self.matrix.iter_mut() {
+            row.rotate_left(1);
+            row.swap(width - 1, width);
+        }
+    }
     fn min_row(&self, index: usize) -> Option<&T> {
         self.matrix[index]
             .iter()
