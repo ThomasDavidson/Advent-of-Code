@@ -1,9 +1,10 @@
+use library::grid::Vec2;
 use library::input::{Day, InputType};
 use std::fmt;
 use std::fmt::Formatter;
 
 fn debug_space(space: &[Vec<bool>]) {
-    for y in space {
+    for y in space.iter().rev() {
         for x in y {
             if *x {
                 eprint!("#");
@@ -46,18 +47,18 @@ impl Present {
             _ => panic!(),
         };
 
-        for i in 0..3usize {
-            let k = (y_iter - i as i16).unsigned_abs() as usize;
-            for j in 0..3usize {
-                let l = (x_iter - j as i16).unsigned_abs() as usize;
+        for y_offset in 0..3usize {
+            let x_present = (y_iter - y_offset as i16).unsigned_abs() as usize;
+            for x_offset in 0..3usize {
+                let y_present = (x_iter - x_offset as i16).unsigned_abs() as usize;
 
                 let cpy = match rotation {
-                    0 | 2 => self.area[k][l],
-                    1 | 3 => self.area[l][k],
+                    0 | 2 => self.area[x_present][y_present],
+                    1 | 3 => self.area[y_present][x_present],
                     _ => panic!(),
                 };
 
-                if space[y + i][x + j] && cpy {
+                if space[y + y_offset][x + x_offset] && cpy {
                     return false;
                 }
             }
@@ -96,7 +97,7 @@ impl fmt::Display for Present {
         Ok(())
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 struct Area {
     height: usize,
     width: usize,
@@ -106,7 +107,7 @@ impl Area {
     fn parse(line: &str) -> Self {
         let (size, required_shapes) = line.split_once(':').unwrap();
 
-        let (height, width) = size.split_once('x').unwrap();
+        let (width, height) = size.split_once('x').unwrap();
         let height = height.parse().unwrap();
         let width = width.parse().unwrap();
 
@@ -154,19 +155,47 @@ impl Tree {
 
         Self { areas, presents }
     }
-    fn solve_area(&self, index: usize) -> bool {
-        let area = &self.areas[index];
-        let mut space = vec![vec![false; area.height]; area.width];
+    fn solve_area(&self, area: Area, space: Space) -> bool {
+        debug_space(&space);
+        if area.required_shapes.iter().all(|req| req == &0) {
+            return true;
+        }
 
-        self.presents[4].place(0, 0, 1, &mut space);
-        debug_space(&space);
-        self.presents[4].place(1, 1, 3, &mut space);
-        debug_space(&space);
+        for (present, _) in area
+            .required_shapes
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| **s != 0)
+        {
+            let space_enum = Vec2::enumerate(&space);
+            for (coord, _) in space_enum {
+                let x = coord.x;
+                let y = coord.y;
+                if coord.x > area.width - 3 || coord.y > area.height - 3 {
+                    continue;
+                }
+
+                for rot in 0..4 {
+                    let mut area = area.clone();
+                    let mut space = space.clone();
+
+                    area.required_shapes[present] -= 1;
+                    if !self.presents[present].place(x, y, rot, &mut space) {
+                        continue;
+                    }
+
+                    if self.solve_area(area.clone(), space) {
+                        return true;
+                    }
+                }
+            }
+        }
 
         false
     }
 }
 
+type Space = Vec<Vec<bool>>;
 struct Day12;
 const DAY: Day12 = Day12;
 
@@ -174,8 +203,15 @@ impl Day<u64> for Day12 {
     fn part_1(&self, input: &str) -> u64 {
         let tree = Tree::parse(input);
 
-        tree.solve_area(0);
-        0
+        let mut part_one_answer = 0;
+        for area in &tree.areas {
+            let space = vec![vec![false; area.width]; area.height];
+            if tree.solve_area(*area, space) {
+                part_one_answer += 1;
+            }
+        }
+
+        part_one_answer
     }
     fn part_2(&self, input: &str) -> u64 {
         0
