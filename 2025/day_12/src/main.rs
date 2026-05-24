@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use library::grid::Vec2;
 use library::input::{Day, InputType};
 use std::fmt;
@@ -6,42 +5,41 @@ use std::fmt::Formatter;
 use std::ops::{Index, IndexMut};
 
 #[derive(Debug)]
-enum PresentIndex {
-    One(usize),
-    Two(usize, usize),
-}
-#[derive(Debug)]
 struct Present {
-    area: [[bool; 3]; 3],
-    index: PresentIndex,
-    space: usize,
+    area: Space,
+    width: usize,
+    height: usize,
+    index: usize,
+    occupied: usize,
 }
 impl Present {
     fn parse(lines: &[&str]) -> Self {
         let index = lines[0].chars().next().unwrap();
-        let index = PresentIndex::One(index as usize - '0' as usize);
+        let index = index as usize - '0' as usize;
 
-        let mut area = [[false; 3]; 3];
+        let mut space: Vec<Vec<bool>> = vec![vec![false; 3]; 3];
         for i in 0..3 {
             let line = &lines[i + 1].chars().map(|c| c == '#').collect::<Vec<_>>();
-            for j in 0..3 {
-                let space = line[j];
-                area[i][j] = space;
-            }
+            space[i][..3].copy_from_slice(&line[..3]);
         }
-
-        let space = area
+        let occupied = space
             .iter()
             .map(|line| line.iter().map(|t| if *t { 1 } else { 0 }).sum::<usize>())
             .sum::<usize>();
 
-        Self { index, area, space }
+        Self {
+            index,
+            area: Space { space },
+            width: 3,
+            height: 3,
+            occupied,
+        }
     }
 }
 impl fmt::Display for Present {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         writeln!(f, "{:?}:", self.index)?;
-        for line in &self.area {
+        for line in &self.area.space {
             for space in line {
                 if *space {
                     write!(f, "#")?;
@@ -112,12 +110,12 @@ impl Tree {
 
         Self { areas, presents }
     }
-    fn solve_area(&self, area: Area, space: Space) -> bool {
+    fn solve_area(&self, area: Area, space: Space) -> Option<Space> {
         // eprintln!("{:?}", area);
 
         if area.required_shapes.iter().all(|req| req == &0) {
             eprintln!("{space:?}");
-            return true;
+            return Some(space);
         }
 
         for (present, _) in area
@@ -126,6 +124,7 @@ impl Tree {
             .enumerate()
             .filter(|(_, s)| **s != 0)
         {
+            // eprintln!("{space:?}");
             let mut space_enum = Vec2::enumerate(&space.space);
             space_enum.sort_by_key(|(coord, _)| -(coord.y as isize));
 
@@ -137,7 +136,7 @@ impl Tree {
                 }
 
                 for rot in 0..4 {
-                    let mut area = area.clone();
+                    let mut area = area;
                     let mut space = space.clone();
 
                     area.required_shapes[present] -= 1;
@@ -145,14 +144,14 @@ impl Tree {
                         continue;
                     }
 
-                    if self.solve_area(area.clone(), space) {
-                        return true;
+                    if let Some(solution) = self.solve_area(area, space) {
+                        return Some(solution);
                     }
                 }
             }
         }
 
-        false
+        None
     }
 }
 
@@ -166,9 +165,9 @@ impl Space {
 
         let (x_iter, y_iter) = match rotation {
             0 => (0, 0),
-            1 => (2, 0),
-            2 => (2, 2),
-            3 => (0, 2),
+            1 => (present.width - 1, 0),
+            2 => (present.width - 1, present.height - 1),
+            3 => (0, present.height - 1),
             _ => panic!(),
         };
 
@@ -176,14 +175,14 @@ impl Space {
             return false;
         }
 
-        for y_offset in 0..3usize {
-            let x_present = (y_iter - y_offset as i16).unsigned_abs() as usize;
-            for x_offset in 0..3usize {
-                let y_present = (x_iter - x_offset as i16).unsigned_abs() as usize;
+        for y_offset in 0..present.height {
+            let x_present = (y_iter as i16 - y_offset as i16).unsigned_abs() as usize;
+            for x_offset in 0..present.width {
+                let y_present = (x_iter as i16 - x_offset as i16).unsigned_abs() as usize;
 
                 let cpy = match rotation {
-                    0 | 2 => present.area[x_present][y_present],
-                    1 | 3 => present.area[y_present][x_present],
+                    0 | 2 => present.area[(y_present, x_present)],
+                    1 | 3 => present.area[(x_present, y_present)],
                     _ => panic!(),
                 };
 
@@ -193,14 +192,14 @@ impl Space {
             }
         }
 
-        for i in 0..3usize {
-            let k = (y_iter - i as i16).unsigned_abs() as usize;
-            for j in 0..3usize {
-                let l = (x_iter - j as i16).unsigned_abs() as usize;
+        for i in 0..present.height {
+            let k = (y_iter as i16 - i as i16).unsigned_abs() as usize;
+            for j in 0..present.width {
+                let l = (x_iter as i16 - j as i16).unsigned_abs() as usize;
 
                 let cpy = match rotation {
-                    0 | 2 => present.area[k][l],
-                    1 | 3 => present.area[l][k],
+                    0 | 2 => present.area[(l, k)],
+                    1 | 3 => present.area[(k, l)],
                     _ => panic!(),
                 };
 
@@ -247,74 +246,17 @@ impl Day<u64> for Day12 {
     fn part_1(&self, input: &str) -> u64 {
         let tree = Tree::parse(input);
 
-        let mut cache: Vec<(usize, usize, (usize, usize))> = Vec::new();
-
-        let combinations: Vec<(usize, usize)> = (0..tree.presents.len())
-            .into_iter()
-            .combinations(2)
-            .map(|combination| (combination[0], combination[1]))
-            .collect();
-        let same: Vec<(usize, usize)> = (0..tree.presents.len())
-            .zip(0..tree.presents.len())
-            .collect();
-
-        for (press1, press2) in combinations.iter().chain(same.iter()) {
-            'outer: for height in 3..=5 {
-                for width in 3..=5 {
-                    let mut required_shapes = [0; 6];
-                    required_shapes[*press1] += 1;
-                    required_shapes[*press2] += 1;
-
-                    let area = Area {
-                        height,
-                        width,
-                        required_shapes,
-                    };
-                    let space = Space {
-                        space: vec![vec![false; area.width]; area.height],
-                    };
-                    if tree.solve_area(area, space) {
-                        cache.push((*press1, *press2, (width, height)));
-                        break 'outer;
-                    }
-                }
-            }
-        }
-        eprintln!("cache: {:?}", cache);
-
-        let mut total = 0;
-        let mut completed = 0;
-        for pres in (0..tree.presents.len()).into_iter().combinations(2) {
-            total += 1;
-
-            let pres1 = pres[0];
-            let pres2 = pres[1];
-
-            let mut required_shapes = [0; 6];
-            required_shapes[pres1] += 1;
-            required_shapes[pres2] += 1;
-
-            let area = Area {
-                height: 3,
-                width: 5,
-                required_shapes,
-            };
-            let space = Space {
-                space: vec![vec![false; area.width]; area.height],
-            };
-            if tree.solve_area(area, space) {
-                completed += 1;
-                eprintln!("true: {area:?}");
-            }
-        }
-        eprintln!("{completed}/{total}");
-
         let mut part_one_answer = 0;
-        for area in &tree.areas[..2] {
-            let space = Space {
-                space: vec![vec![false; area.width]; area.height],
-            };
-            if tree.solve_area(*area, space) {
+        for area in tree.areas {
+            let total_area = area.width * area.height;
+            let required_area = area
+                .required_shapes
+                .iter()
+                .enumerate()
+                .map(|(i, s)| tree.presents[i].occupied * *s as usize)
+                .sum::<usize>();
+
+            if (required_area as f32 / total_area as f32) < 0.999 {
                 part_one_answer += 1;
             }
         }
@@ -326,5 +268,5 @@ impl Day<u64> for Day12 {
     }
 }
 fn main() -> std::io::Result<()> {
-    DAY.run(InputType::Example)
+    DAY.run(InputType::UserInput)
 }
