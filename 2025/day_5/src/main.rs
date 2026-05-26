@@ -35,22 +35,18 @@ impl Database {
         }
     }
     fn count_fresh_ingredients(&self) -> u32 {
-        let mut fresh_ingredient_count = 0;
-        for ingredient in &self.ingredient_ids {
-            if self
-                .fresh_id_ranges
-                .iter()
-                .any(|range| range.contains(ingredient))
-            {
-                fresh_ingredient_count += 1;
-            }
-        }
-
-        fresh_ingredient_count
+        self.ingredient_ids
+            .iter()
+            .filter(|ingredient| {
+                self.fresh_id_ranges
+                    .iter()
+                    .any(|range| range.contains(ingredient))
+            })
+            .count() as u32
     }
 
     fn fresh_ids_in_range(&self) -> Id {
-        let mut ranges: VecDeque<_> = self.fresh_id_ranges.clone().try_into().unwrap();
+        let mut ranges: VecDeque<_> = self.fresh_id_ranges.clone().into();
 
         for _ in 0..self.fresh_id_ranges.len() * 2 {
             let range1 = ranges.pop_front().unwrap();
