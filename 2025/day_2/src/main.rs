@@ -65,9 +65,9 @@ fn part_2_valid_id(number: Id) -> bool {
     true
 }
 
-struct Day1;
-const DAY: Day1 = Day1;
-impl Day<Id> for Day1 {
+struct Day2;
+const DAY: Day2 = Day2;
+impl Day<Id> for Day2 {
     fn part_1(&self, input: &str) -> Id {
         let mut part_1_answer = 0;
 
