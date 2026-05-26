@@ -54,7 +54,7 @@ fn part_2_valid_id(number: Id) -> bool {
 
     // iterate over factors of the length of the number
     for i in (1..=(len / 2)).filter(|i| len % i == 0) {
-        let mut chunks = formated_number[..].chunks(i);
+        let mut chunks = formated_number.chunks(i);
 
         let first_chunk = chunks.next().unwrap();
 
