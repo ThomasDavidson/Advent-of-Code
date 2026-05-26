@@ -109,7 +109,7 @@ impl Day<u32> for Day8 {
         let playground = Playground::parse(input);
 
         let mut distances = playground.calculate_distances();
-        distances.sort_by(|a, b| a.0.cmp(&b.0));
+        distances.sort_by_key(|(distance, ..)| *distance);
 
         let mut circuits = Circuits::from_playground(playground);
 
@@ -126,7 +126,7 @@ impl Day<u32> for Day8 {
         let playground = Playground::parse(input);
 
         let mut distances = playground.calculate_distances();
-        distances.sort_by(|a, b| a.0.cmp(&b.0));
+        distances.sort_by_key(|(distance, ..)| *distance);
 
         let mut circuits = Circuits::from_playground(playground);
 
