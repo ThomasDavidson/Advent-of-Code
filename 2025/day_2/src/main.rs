@@ -69,32 +69,22 @@ struct Day2;
 const DAY: Day2 = Day2;
 impl Day<Id> for Day2 {
     fn part_1(&self, input: &str) -> Id {
-        let mut part_1_answer = 0;
-
         let gift_shop = GiftShop::parse(input);
 
-        for product_id_ranges in &gift_shop.product_id_ranges {
-            part_1_answer += product_id_ranges
-                .get_invalid_ids(&part_1_valid_id)
-                .iter()
-                .sum::<Id>();
-        }
-
-        part_1_answer
+        gift_shop
+            .product_id_ranges
+            .iter()
+            .flat_map(|product_id_ranges| product_id_ranges.get_invalid_ids(&part_1_valid_id))
+            .sum::<Id>()
     }
     fn part_2(&self, input: &str) -> Id {
-        let mut part_2_answer = 0;
-
         let gift_shop = GiftShop::parse(input);
 
-        for product_id_ranges in &gift_shop.product_id_ranges {
-            part_2_answer += product_id_ranges
-                .get_invalid_ids(&part_2_valid_id)
-                .iter()
-                .sum::<Id>();
-        }
-
-        part_2_answer
+        gift_shop
+            .product_id_ranges
+            .iter()
+            .flat_map(|product_id_ranges| product_id_ranges.get_invalid_ids(&part_2_valid_id))
+            .sum::<Id>()
     }
 }
 
