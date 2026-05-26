@@ -113,10 +113,11 @@ impl Traverse {
             return if condition1 && condition2 { 1 } else { 0 };
         }
 
-        if let Some((result, req1, req2)) = lookup.get(&self.current) {
-            if *req1 == condition1 && *req2 == condition2 {
-                return *result;
-            };
+        if let Some((result, req1, req2)) = lookup.get(&self.current)
+            && *req1 == condition1
+            && *req2 == condition2
+        {
+            return *result;
         }
 
         let mut result = 0;
