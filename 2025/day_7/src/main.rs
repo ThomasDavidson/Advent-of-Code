@@ -1,11 +1,11 @@
 use library::grid;
-use library::grid::Vec2;
+use library::grid::{Coord, Vec2};
 use library::input::{Day, InputType};
 use std::fmt;
 use std::fmt::Formatter;
+use std::ops::{Index, IndexMut};
 
 type Offset = Vec2<isize>;
-type Coord = Vec2<usize>;
 
 struct TachyonManifold {
     grid: Vec<Vec<Tile>>,
@@ -18,12 +18,6 @@ impl TachyonManifold {
                 .map(|line| line.chars().map(Tile::parse).collect())
                 .collect(),
         }
-    }
-    fn get(&self, coord: Coord) -> &Tile {
-        &self.grid[coord.y][coord.x]
-    }
-    fn get_mut(&mut self, coord: Coord) -> &mut Tile {
-        &mut self.grid[coord.y][coord.x]
     }
 
     fn propagate_laser(&mut self) -> usize {
@@ -43,11 +37,8 @@ impl TachyonManifold {
         for y in 0..height {
             for x in 0..width {
                 let coord = Coord { x, y };
-                let prev_tile = self.get(coord).to_owned();
 
-                let laser = prev_tile.laser_property();
-
-                // println!("{coord:?}: {tile}");
+                let laser = self[coord].laser_property();
 
                 for offset in laser.offsets() {
                     let Ok(next_x) = usize::try_from(coord.x as isize + offset.x) else {
@@ -64,19 +55,13 @@ impl TachyonManifold {
                         continue;
                     }
 
-                    let tile = self.get_mut(next);
-
-                    if *tile == Tile::EmptySpace {
-                        *tile = Tile::Laser;
-                    } else if *tile == Tile::Splitter {
-                        *tile = Tile::ActivatedSplitter
+                    match self[next] {
+                        Tile::EmptySpace => self[next] = Tile::Laser,
+                        Tile::Splitter => self[next] = Tile::ActivatedSplitter,
+                        _ => (),
                     }
 
                     visited[next.y][next.x] += visited[coord.y][coord.x];
-                    // if prev_tile == Tile::Splitter || prev_tile == Tile::ActivatedSplitter {
-                    //     visited[next.y][next.x] += 1;
-                    // } else {
-                    // }
                 }
             }
         }
@@ -95,8 +80,20 @@ impl fmt::Display for TachyonManifold {
         Ok(())
     }
 }
+impl Index<Coord> for TachyonManifold {
+    type Output = Tile;
 
-#[derive(PartialEq, Clone)]
+    fn index(&self, index: Coord) -> &Self::Output {
+        &self.grid[index.y][index.x]
+    }
+}
+impl IndexMut<Coord> for TachyonManifold {
+    fn index_mut(&mut self, index: Coord) -> &mut Self::Output {
+        &mut self.grid[index.y][index.x]
+    }
+}
+
+#[derive(PartialEq, Clone, Copy)]
 enum Tile {
     EmptySpace,
     Start,
