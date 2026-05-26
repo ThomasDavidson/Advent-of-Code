@@ -29,7 +29,7 @@ impl TheaterHitbox {
         let mut max_x = 0;
         for coords in border {
             if coords.y != y {
-                if !(max_x == 0) {
+                if max_x != 0 {
                     hitboxes.insert(y, Hitbox { min_x, max_x });
                 }
                 y = coords.y;
@@ -54,7 +54,7 @@ impl Hitbox {
     }
 }
 
-fn create_border(corners: &Vec<Coord>) -> HashSet<Coord> {
+fn create_border(corners: &[Coord]) -> HashSet<Coord> {
     let mut grid: HashSet<Coord> = HashSet::new();
 
     for i in 0..corners.len() {
@@ -77,23 +77,31 @@ fn create_border(corners: &Vec<Coord>) -> HashSet<Coord> {
     grid
 }
 
-fn check_rectangle(corners: &Vec<Coord>, theater_hitbox: &TheaterHitbox) -> bool {
-    for i in 0..corners.len() {
-        let coord_1 = &corners[i];
-        let coord_2 = &corners[(i + 1).rem(corners.len())];
+fn check_rectangle(
+    corners: &[Coord],
+    theater_hitbox: &TheaterHitbox,
+    check_x: &[usize],
+    check_y: &[usize],
+) -> bool {
+    let y_min = corners.iter().min_by_key(|coord| coord.y).unwrap().y;
+    let y_max = corners.iter().max_by_key(|coord| coord.y).unwrap().y;
 
-        let y_min = coord_1.y.min(coord_2.y);
-        let y_max = coord_1.y.max(coord_2.y);
+    let x_min = corners.iter().min_by_key(|coord| coord.x).unwrap().x;
+    let x_max = corners.iter().max_by_key(|coord| coord.x).unwrap().x;
 
-        let x_min = coord_1.x.min(coord_2.x);
-        let x_max = coord_1.x.max(coord_2.x);
-
-        for y in y_min..=y_max {
-            for x in x_min..=x_max {
-                let coord = Coord { x, y };
-                if !theater_hitbox.is_inside(&coord) {
-                    return false;
-                }
+    for y in [y_min, y_max] {
+        for &x in check_x.iter().filter(|&&x| x_min < x && x < x_max) {
+            let coord = Coord { x, y };
+            if !theater_hitbox.is_inside(&coord) {
+                return false;
+            }
+        }
+    }
+    for &y in check_y.iter().filter(|&&y| y_min < y && y < y_max) {
+        for x in [x_min, x_max] {
+            let coord = Coord { x, y };
+            if !theater_hitbox.is_inside(&coord) {
+                return false;
             }
         }
     }
@@ -142,7 +150,6 @@ impl Day<u64> for Day9 {
     }
     fn part_2(&self, input: &str) -> u64 {
         let theater = Theater::parse(input);
-        let mut part_2_answer = 0;
 
         let red_tile_border = theater.create_border();
 
@@ -154,26 +161,32 @@ impl Day<u64> for Day9 {
             .combinations(2)
             .sorted_by(|b, a| rectangle_size(a[0], a[1]).cmp(&rectangle_size(b[0], b[1])));
 
-        for red_tile in combinations {
-            let tile1 = red_tile[0];
-            let tile2 = red_tile[1];
+        let mut check_x: Vec<usize> = theater.red_tiles.iter().map(|tile| tile.x).collect();
+        check_x.sort();
+        check_x.dedup();
+
+        let mut check_y: Vec<usize> = theater.red_tiles.iter().map(|tile| tile.y).collect();
+        check_y.sort();
+        check_y.dedup();
+
+        for (tile1, tile2) in combinations.map(|red_tile| (red_tile[0], red_tile[1])) {
             let rect_size = rectangle_size(tile1, tile2);
 
             if check_rectangle(
-                &vec![
+                &[
                     tile1.to_owned(),
                     Coord::new(tile1.x, tile2.y),
                     tile2.to_owned(),
                     Coord::new(tile2.x, tile1.y),
                 ],
                 &theater_hitbox,
+                &check_x,
+                &check_y,
             ) {
-                part_2_answer = part_2_answer.max(rect_size);
-                break;
+                return rect_size;
             }
         }
-
-        part_2_answer
+        panic!()
     }
 }
 
