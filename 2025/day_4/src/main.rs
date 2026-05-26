@@ -3,6 +3,7 @@ use library::input::{Day, InputType};
 use std::cmp::PartialEq;
 use std::fmt;
 use std::fmt::Formatter;
+use std::ops::{Index, IndexMut};
 
 type Coord = Vec2<usize>;
 fn coord_add(
@@ -12,13 +13,9 @@ fn coord_add(
     width: usize,
     height: usize,
 ) -> Option<Coord> {
-    let Ok(x): Result<usize, _> = (x_offset as i16 + coord.x as i16).try_into() else {
-        return None;
-    };
+    let x = (x_offset as i16 + coord.x as i16).try_into().ok()?;
 
-    let Ok(y): Result<usize, _> = (y_offset as i16 + coord.y as i16).try_into() else {
-        return None;
-    };
+    let y = (y_offset as i16 + coord.y as i16).try_into().ok()?;
 
     let new_coord = Coord::new(x, y);
 
@@ -42,12 +39,6 @@ impl PrintingDepartment {
             .collect();
         Self { grid }
     }
-    fn get(&self, coord: Coord) -> &Floor {
-        &self.grid[coord.y][coord.x]
-    }
-    fn get_mut(&mut self, coord: Coord) -> &mut Floor {
-        &mut self.grid[coord.y][coord.x]
-    }
 
     fn adjacent_paper(&self, coord: Coord) -> u8 {
         const CHECK: [(i8, i8); 8] = [
@@ -63,20 +54,12 @@ impl PrintingDepartment {
         let width = self.grid[0].len();
         let height = self.grid.len();
 
-        let mut num_adjacent_papers = 0;
-        for (x_offset, y_offset) in CHECK {
-            let Some(new_coord) = coord_add(coord, x_offset, y_offset, width, height) else {
-                continue;
-            };
-
-            let floor = self.get(new_coord);
-
-            if *floor == Floor::Paper {
-                num_adjacent_papers += 1;
-            }
-        }
-
-        num_adjacent_papers
+        CHECK
+            .into_iter()
+            .filter_map(|(x_offset, y_offset)| coord_add(coord, x_offset, y_offset, width, height))
+            .map(|new_coord| &self[new_coord])
+            .filter(|floor| floor == &&Floor::Paper)
+            .count() as u8
     }
 }
 impl fmt::Display for PrintingDepartment {
@@ -88,6 +71,18 @@ impl fmt::Display for PrintingDepartment {
             writeln!(f)?;
         }
         Ok(())
+    }
+}
+impl Index<Coord> for PrintingDepartment {
+    type Output = Floor;
+
+    fn index(&self, index: Coord) -> &Self::Output {
+        &self.grid[index.y][index.x]
+    }
+}
+impl IndexMut<Coord> for PrintingDepartment {
+    fn index_mut(&mut self, index: Coord) -> &mut <Self as Index<Vec2<usize>>>::Output {
+        &mut self.grid[index.y][index.x]
     }
 }
 
@@ -148,14 +143,13 @@ impl Day<u32> for Day4 {
                     remove_coords.push(coord);
                 }
             }
-            if remove_coords.len() == 0 {
+            if remove_coords.is_empty() {
                 break;
             }
             part_2_answer += remove_coords.len() as u32;
 
             for remove_coord in remove_coords {
-                let floor = department.get_mut(remove_coord);
-                *floor = Floor::Empty
+                department[remove_coord] = Floor::Empty
             }
         }
 
